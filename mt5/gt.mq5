@@ -3,84 +3,70 @@
 //|                        Copyright 2026, Mochamad Tabrani & Grok   |
 //|                                          https://cindo.pages.dev |
 //+------------------------------------------------------------------+
-
 #property copyright   "Mochamad Tabrani (c) 2026, Escindo"
-#property link        "cindo.pages.dev"
+#property link        "https://cindo.pages.dev"
 #property version     "0.01"
 #property description "Escindo GT Trading Robot - Komando CindoLab"
 #property description "========================================================"
 #property description "Robot Trading Escindo beroperasi berdasarkan Sinyal GT Besar."
 #property description "Didesain spesifik untuk volatilitas tinggi (BTCUSD, XAUUSD, GOLDmicro)."
-#property description " "
-#property description "METHODOLOGY:"
-#property description "- Observasi GT Nilai (Arah) di Timeframe Besar (H1/H4)."
-#property description "- Pembalikan arah otomatis (Reverse) setelah terkena Stop Loss."
-#property description "- Penerusan arah (Follow) setelah terpenuhi Take Profit."
-#property description "- Pelipatgandaan amunisi (Martingale) untuk menutupi SL."
-#property description " "
-#property description "SUPPORT & COMMUNITY:"
-#property description "- Telegram: @kopigold"
-#property description "- Markas Besar: cindo.pages.dev/indodev"
-#property description "========================================================"
 
 //+------------------------------------------------------------------+
-//| [1] Include & Define                                             |
+//| Include                                                          |
 //+------------------------------------------------------------------+
 #include <Trade\Trade.mqh>
 
-enum ENUM_THEME {
-    THEME_ONYX_GOLD,  // Classic Onyx & Gold
-    THEME_NEON_BLUE,  // Cyberpunk Cyan
-    THEME_MATRIX,     // Retro Green
-    THEME_PURE_DARK   // Minimalist Grey
+//+------------------------------------------------------------------+
+//| Enum & Types                                                     |
+//+------------------------------------------------------------------+
+enum ENUM_THEME
+{
+    THEME_ONYX_GOLD,   // Classic Onyx & Gold
+    THEME_NEON_BLUE,   // Cyberpunk Cyan
+    THEME_MATRIX,      // Retro Green
+    THEME_PURE_DARK    // Minimalist Grey
 };
 
-//â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// [ ABOUT & SYSTEM INFORMATION ]
-//â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-input string _s0 = "â•â•â•â•â•â•â•â•â• Escindo GT TRADING ROBOT â•â•â•â•â•â•â•â•â•"; // [ SYSTEM MODULE ]
-sinput string Info_System  = "Escindo GT Trading Robot"; 
-sinput string Info_Version = "v0.01 [Komando CindoLab]"; 
-sinput string Info_Author  = "Escindo Strategy";                  
-sinput string Info_Support = "cindo.pages.dev/indodev";   
+//+------------------------------------------------------------------+
+//| Input Parameters                                                 |
+//+------------------------------------------------------------------+
 
-//â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// [ DASHBOARD LAYOUT & POSITION ]
-//â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-input string _s1 = "â•â•â•â•â•â•â•â•â• DASHBOARD GEOMETRY â•â•â•â•â•â•â•â•"; // [ LAYOUT ]
-input int    X_Offset             = 20;      // Horizontal Offset (Pixels)
-input int    Y_Offset             = 40;      // Vertical Offset (Pixels)
-input int    Panel_Width          = 600;     // Total Dashboard Width
+//--- System Information
+input string          _s0                  = "================= Escindo GT TRADING ROBOT ================="; 
+sinput string         Info_System          = "Escindo GT Trading Robot"; 
+sinput string         Info_Version         = "v0.01 [Komando CindoLab]"; 
+sinput string         Info_Author          = "Escindo Strategy";                  
+sinput string         Info_Support         = "cindo.pages.dev/indodev";   
 
-//â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// [ TRADING ENGINE PROTOCOL ]
-//â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-input string _s2 = "â•â•â•â•â•â•â•â•â• ESCINDO ALGO STRATEGY â•â•â•â•â•â•â•â•â•"; // [ ENGINE ]
-input ENUM_TIMEFRAMES InpGTTimeframe= PERIOD_H1;              // GT Besar Timeframe (Signal Basis)
-input double          InpLot        = 0.01;                   // Base Lot Volume
-input double          InpMultiplier = 2.0;                    // Martingale Volume Multiplier
-input int             InpMaxSteps   = 5;                      // Max Martingale Iterations
-input int             InpTP         = 300;                    // Take Profit Distance (Points)
-input int             InpSL         = 150;                    // Stop Loss Distance (Points)
-input int             InpMagic      = 888999;                 // Algorithm Serial ID
+//--- Dashboard Layout
+input string          _s1                  = "================= DASHBOARD GEOMETRY =================";
+input int             X_Offset             = 20;       // Horizontal Offset (Pixels)
+input int             Y_Offset             = 40;       // Vertical Offset (Pixels)
+input int             Panel_Width          = 600;      // Total Dashboard Width
 
-//â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// [ THEME & COLOR CUSTOMIZATION ]
-//â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-input string _s5 = "â•â•â•â•â•â•â•â•â•â• UI THEME & PALETTE â•â•â•â•â•â•â•â•â•"; // [ COLORS ]
-input ENUM_THEME      InpTheme      = THEME_ONYX_GOLD;        // Active Visual Theme
-input color  Label_Color          = clrGold; // Primary Label Color
-input color  Value_Color          = clrWhite; // Numerical Value Color
-input color  Live_Color           = C'255,225,100'; // Real-time Accent Color
+//--- Trading Engine Settings
+input string          _s2                  = "================= ESCINDO ALGO STRATEGY =================";
+input ENUM_TIMEFRAMES InpGTTimeframe       = PERIOD_H1;     // GT Besar Timeframe (Signal Basis)
+input double          InpLot               = 0.01;          // Base Lot Volume
+input double          InpMultiplier        = 2.0;           // Martingale Volume Multiplier
+input int             InpMaxSteps          = 5;             // Max Martingale Iterations
+input int             InpTP                = 300;           // Take Profit Distance (Points)
+input int             InpSL                = 150;           // Stop Loss Distance (Points)
+input int             InpMagic             = 888999;        // Algorithm Serial ID
 
-//â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// [ VISUALIZATION & CHART FEEDBACK ]
-//â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-input string _s6 = "â•â•â•â•â•â•â•â•â• CHART VISUALIZATION â•â•â•â•â•â•â•â•"; // [ VISUALS ]
-input bool            InpShowGTChart= true;                   // Plot GT Mathematical Levels
-input int             InpLevelWidth = 1;                      // Level Line Thickness
-input ENUM_LINE_STYLE InpLevelStyle = STYLE_SOLID;            // Level Line Pattern
-input bool            InpShowLabels = true;                   // Display Level Descriptions
+//--- Theme & Color Settings
+input string          _s5                  = "================= UI THEME & PALETTE =================";
+input ENUM_THEME      InpTheme             = THEME_ONYX_GOLD;   // Active Visual Theme
+input color           Label_Color          = clrGold;           // Primary Label Color
+input color           Value_Color          = clrWhite;          // Numerical Value Color
+input color           Live_Color           = C'255,225,100';    // Real-time Accent Color
+
+//--- Chart Visualization
+input string          _s6                  = "================= CHART VISUALIZATION =================";
+input bool            InpShowGTChart       = true;              // Plot GT Mathematical Levels
+input int             InpLevelWidth        = 1;                 // Level Line Thickness
+input ENUM_LINE_STYLE InpLevelStyle        = STYLE_SOLID;       // Level Line Pattern
+input bool            InpShowLabels        = true;              // Display Level Descriptions
 
 //+------------------------------------------------------------------+
 //| [2] Global Variables                                             |
