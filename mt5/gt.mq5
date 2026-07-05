@@ -1,14 +1,14 @@
 //+------------------------------------------------------------------+
-//|                                                      Escindo.mq5 |
-//|                        Copyright 2026, Mochamad Tabrani & Grok   |
+//|                                                  GubukTrader.mq5 |
+//|                          Copyright 2026, Mochamad Tabrani & Grok |
 //|                                          https://cindo.pages.dev |
 //+------------------------------------------------------------------+
-#property copyright   "Mochamad Tabrani (c) 2026, Escindo"
+#property copyright   "Mochamad Tabrani (c) 2026, Ringin Bambu"
 #property link        "https://cindo.pages.dev"
 #property version     "0.01"
-#property description "Escindo GT Trading Robot - Komando CindoLab"
+#property description "EA GT Trading - Komando Profit & Keamanan"
 #property description "========================================================"
-#property description "Robot Trading Escindo beroperasi berdasarkan Sinyal GT Besar."
+#property description "EA Trading Gubuk Trader beroperasi berdasarkan Sinyal GT Besar."
 #property description "Didesain spesifik untuk volatilitas tinggi (BTCUSD, XAUUSD, GOLDmicro)."
 
 //+------------------------------------------------------------------+
@@ -32,10 +32,10 @@ enum ENUM_THEME
 //+------------------------------------------------------------------+
 
 //--- System Information
-input string          _s0                  = "================= Escindo GT TRADING ROBOT ================="; 
-sinput string         Info_System          = "Escindo GT Trading Robot"; 
-sinput string         Info_Version         = "v0.01 [Komando CindoLab]"; 
-sinput string         Info_Author          = "Escindo Strategy";                  
+input string          _s0                  = "================= EA GUBUK TRADER GT TRADING ================="; 
+sinput string         Info_System          = "EA Gubuk Trader GT Trading "; 
+sinput string         Info_Version         = "v0.01 [Gubuk Trader]"; 
+sinput string         Info_Author          = "Mochamad Tabrani";                  
 sinput string         Info_Support         = "cindo.pages.dev/indodev";   
 
 //--- Dashboard Layout
@@ -45,7 +45,7 @@ input int             Y_Offset             = 40;       // Vertical Offset (Pixel
 input int             Panel_Width          = 600;      // Total Dashboard Width
 
 //--- Trading Engine Settings
-input string          _s2                  = "================= ESCINDO ALGO STRATEGY =================";
+input string          _s2                  = "================= GUBUK TRADER ALGO STRATEGY =================";
 input ENUM_TIMEFRAMES InpGTTimeframe       = PERIOD_H1;     // GT Besar Timeframe (Signal Basis)
 input double          InpLot               = 0.01;          // Base Lot Volume
 input double          InpMultiplier        = 2.0;           // Martingale Volume Multiplier
@@ -81,7 +81,7 @@ double   g_lastLot      = 0;  // Volume dari posisi terakhir yang ditutup
 int      g_lastDeal      = -1; // Ticket deal terakhir yang telah diproses
 bool     g_isFirstTrade = true; // Flag untuk perdagangan pertama
 
-#define PREFIX          "HOTELRICHDAD"
+#define PREFIX          "GUBUKTRADER"
 #define COLOR_BG        C'10,10,10'    // Jet Black
 #define COLOR_STRIPE    C'18,18,18'    // Subtle Stripe
 #define COLOR_HDR_BG    C'35,35,35'    // Slate
@@ -223,7 +223,7 @@ void OnChartEvent(const int id, const long& lparam, const double& dparam, const 
       // Visual Toggles
       else if(sparam == PREFIX + "TOG_CHART") { extShowGTChart = !extShowGTChart; if(!extShowGTChart) DeleteVisualization(); ResetDashboard(); }
       
-      // (No object-based logic in HotelRichDad mode)
+      // (No object-based logic in GubukTrader mode)
    }
 }
 
@@ -381,7 +381,7 @@ void CreateDashboardTab(int y)
    // Header Area
    int centerX = X_Offset + (Panel_Width / 2);
    CreateRect(PREFIX + "Hdr", X_Offset + 4, y, Panel_Width - 8, 45, gClrHdr);
-   CreateLabel(PREFIX + "Title", centerX, y + 15, "GT ENGINE LIVE", gClrAccent, 11, FONT_MAIN, ANCHOR_CENTER);
+   CreateLabel(PREFIX + "Title", centerX, y + 15, "GUBUK TRADER", gClrAccent, 11, FONT_MAIN, ANCHOR_CENTER);
    y += 50;
    
    // Column Titles
@@ -400,7 +400,7 @@ void CreateDashboardTab(int y)
    CreateQuadBarRow(PREFIX + "R_CL",    y, "Bawah");     y += ROW_H;
    CreateQuadBarRow(PREFIX + "R_OL",    y, "Rendah");    y += ROW_H;
    CreateQuadBarRow(PREFIX + "R_Awal",  y, "Awal");      y += ROW_H;
-   CreateQuadBarRow(PREFIX + "R_OC",    y, "Nilai");     y += ROW_H;
+   CreateQuadBarRow(PREFIX + "R_OC",    y, "Neto");     y += ROW_H;
    CreateQuadBarRow(PREFIX + "R_LH",    y, "Inti");      y += ROW_H;
    CreateQuadBarRow(PREFIX + "R_Range", y, "Jangkauan"); y += ROW_H + 5;
 
@@ -456,13 +456,13 @@ void CreateAboutTab(int y)
    int lineY = y + 20;
    CreateLabel(PREFIX + "Ab_Title", contentX, lineY, "GT SYSTEM - QUAD-BAR PROFESSIONAL", gClrAccent, 11);
    lineY += 30;
-   CreateLabel(PREFIX + "Ab_Desc1", contentX, lineY, "Sistem analisis matematika pasar berdasarkan 4 bar history.", clrWhite, 9);
+   CreateLabel(PREFIX + "Ab_Desc1", contentX, lineY, "Sistem analisis matematika pasar berdasarkan riwayat 4 GT .", clrWhite, 9);
    lineY += 20;
    CreateLabel(PREFIX + "Ab_Desc2", contentX, lineY, "Mendeteksi Inti (Volume) dan Jangkauan (Volatility) secara real-time.", clrWhite, 9);
    
    lineY += 40;
    CreateLabel(PREFIX + "Ab_DevLabel", contentX, lineY, "Developed by:", gClrLabel, 8);
-   CreateLabel(PREFIX + "Ab_DevVal", contentX + 120, lineY, "Mochamad Tabrani", gClrValue, 8);
+   CreateLabel(PREFIX + "Ab_DevVal", contentX + 120, lineY, "MOCHAMAD TABRANI", gClrValue, 8);
    lineY += 20;
    CreateLabel(PREFIX + "Ab_VerLabel", contentX, lineY, "Version:", gClrLabel, 8);
    CreateLabel(PREFIX + "Ab_VerVal", contentX + 120, lineY, "0.01 Professional", gClrValue, 8);
@@ -473,8 +473,8 @@ void CreateAboutTab(int y)
    lineY += 50;
    CreateRect(PREFIX + "Ab_Box", contentX, lineY, contentW, 100, gClrBg, clrSilver);
    CreateLabel(PREFIX + "Ab_Status", contentX + 10, lineY + 10, "SYSTEM STATUS: OPERATIONAL", gClrSuccess, 9);
-   CreateLabel(PREFIX + "Ab_Lince", contentX + 10, lineY + 30, "License: CINDOLAB Community Edition", clrSilver, 8);
-   CreateLabel(PREFIX + "Ab_Support", contentX + 10, lineY + 70, "Support: mql5.com/getbos | t.me/kopigold", gClrAccent, 8);
+   CreateLabel(PREFIX + "Ab_Lince", contentX + 10, lineY + 30, "License: RINGIN BAMBU Juli 2026", clrSilver, 8);
+   CreateLabel(PREFIX + "Ab_Support", contentX + 10, lineY + 70, "Support: mql5.com/getbos | t.me/ringinbambu", gClrAccent, 8);
 }
 
 void CreateTradingTab(int y)
@@ -483,13 +483,13 @@ void CreateTradingTab(int y)
    int lineY = y + 20;
    int contentX = X_Offset + 20;
    
-   CreateLabel(PREFIX + "Tr_Title", contentX, lineY, "ALGORITHM CONFIGURATION SUMMARY", gClrAccent, 10);
+   CreateLabel(PREFIX + "Tr_Title", contentX, lineY, "RINGKASAN PENGATURAN ALGORITMA", gClrAccent, 10);
    lineY += 40;
    
-   CreateLabel(PREFIX + "Tr_StratL", contentX, lineY, "Timeframe GT:", gClrLabel, 9);
+   CreateLabel(PREFIX + "Tr_StratL", contentX, lineY, "Durasi GT:", gClrLabel, 9);
    CreateLabel(PREFIX + "Tr_StratV", contentX + 150, lineY, EnumToString(InpGTTimeframe), gClrValue, 9);
    lineY += 25;
-   CreateLabel(PREFIX + "Tr_LotL", contentX, lineY, "Base Lot:", gClrLabel, 9);
+   CreateLabel(PREFIX + "Tr_LotL", contentX, lineY, "Volume:", gClrLabel, 9);
    CreateLabel(PREFIX + "Tr_LotV", contentX + 150, lineY, DoubleToString(InpLot, 2), gClrValue, 9);
    lineY += 25;
    CreateLabel(PREFIX + "Tr_StepL", contentX, lineY, "Martingale x:", gClrLabel, 9);
@@ -510,7 +510,7 @@ void CreateColorsTab(int y)
    int lineY = y + 20;
    int centerX = X_Offset + Panel_Width/2;
    
-   CreateLabel(PREFIX + "Cl_Title", centerX, lineY, "SELECT INTERFACE THEME", gClrAccent, 11, FONT_MAIN, ANCHOR_CENTER);
+   CreateLabel(PREFIX + "Cl_Title", centerX, lineY, "PILIH TEMA TAMPILAN", gClrAccent, 11, FONT_MAIN, ANCHOR_CENTER);
    lineY += 50;
    
    int btnW = 180, btnH = 35;
@@ -521,7 +521,7 @@ void CreateColorsTab(int y)
    CreateButton(PREFIX + "THM_MATRIX", centerX, lineY, btnW, btnH, "RETRO MATRIX", clrWhite, C'10,50,10');
    
    lineY += 60;
-   CreateLabel(PREFIX + "Cl_Note", centerX, lineY, "Theme changes apply instantly across all tabs.", clrSilver, 8, FONT_MAIN, ANCHOR_CENTER);
+   CreateLabel(PREFIX + "Cl_Note", centerX, lineY, "Perubahan tema yang langsung diterapkan di semua tab (halaman/lembar kerja).", clrSilver, 8, FONT_MAIN, ANCHOR_CENTER);
 }
 
 void CreateVisualTab(int y)
@@ -530,18 +530,18 @@ void CreateVisualTab(int y)
    int lineY = y + 20;
    int centerX = X_Offset + Panel_Width/2;
    
-   CreateLabel(PREFIX + "Vs_Title", centerX, lineY, "CHART VISUALIZATION CONTROL", gClrAccent, 11, FONT_MAIN, ANCHOR_CENTER);
+   CreateLabel(PREFIX + "Vs_Title", centerX, lineY, "PENGATURAN TAMPILAN GT", gClrAccent, 11, FONT_MAIN, ANCHOR_CENTER);
    lineY += 60;
    
-   string toggleText = extShowGTChart ? "DISABLE CHART LEVELS" : "ENABLE CHART LEVELS";
+   string toggleText = extShowGTChart ? "MENONAKTIFKAN LEVEL GT" : "MENGAKTIFKAN LEVEL GT";
    color toggleBg = extShowGTChart ? gClrDanger : gClrSuccess;
    
    CreateButton(PREFIX + "TOG_CHART", centerX, lineY, 220, 40, toggleText, clrWhite, toggleBg);
    
    lineY += 80;
-   CreateLabel(PREFIX + "Vs_Desc", centerX, lineY, "Toggles real-time plotting of GT mathematical lines", clrWhite, 9, FONT_MAIN, ANCHOR_CENTER);
+   CreateLabel(PREFIX + "Vs_Desc", centerX, lineY, "Mengaktifkan/menonaktifkan penggambaran garis GT secara langsung", clrWhite, 9, FONT_MAIN, ANCHOR_CENTER);
    lineY += 20;
-   CreateLabel(PREFIX + "Vs_Desc2", centerX, lineY, "(Tinggi, Atas, Bawah, Rendah, Awal, Nilai, Inti) on chart.", clrWhite, 9, FONT_MAIN, ANCHOR_CENTER);
+   CreateLabel(PREFIX + "Vs_Desc2", centerX, lineY, "(Tinggi, Rendah, Awal, Inti) di grafik.", clrWhite, 9, FONT_MAIN, ANCHOR_CENTER);
 }
 
 bool CreateTabButton(string name, int x, int y, int w, int h, string text, bool active)
@@ -646,7 +646,54 @@ void UpdateInfoSection()
    SetVal(PREFIX + "Acc_BalVal", DoubleToString(balance, 2), gClrValue);
    SetVal(PREFIX + "Acc_EqVal", DoubleToString(equity, 2), gClrValue);
    SetVal(PREFIX + "Sym_SpreadVal", IntegerToString(spread), gClrValue);
-   SetVal(PREFIX + "Sym_PLVal", DoubleToString(symbolPL, 2), symbolPL >= 0 ? gClrSuccess : gClrDanger);
+
+   // Calculate point value total early
+   double netLots = buyLots - sellLots;
+   double tickSize = SymbolInfoDouble(_Symbol, SYMBOL_TRADE_TICK_SIZE);
+   double tickValue = SymbolInfoDouble(_Symbol, SYMBOL_TRADE_TICK_VALUE);
+   double pointValuePerLot = (tickSize > 0) ? tickValue * (myPoint / tickSize) : myPoint;
+   double pointValueTotal = MathAbs(netLots) * pointValuePerLot;
+
+   double ptsFloating = 0;
+   if(pointValueTotal > 0)
+      ptsFloating = symbolPL / pointValueTotal;
+
+   // Format Symbol P/L dynamically with signs, unicode indicators, and neutral state color
+   string plStr = "";
+   color plColor = gClrValue;
+   
+   if(symbolPL > 0.005)
+   {
+      plColor = gClrSuccess;
+      if(buyLots > 0 || sellLots > 0)
+      {
+         if(pointValueTotal > 0)
+            plStr = StringFormat("▲ +%.2f (+%d pts)", symbolPL, (int)MathRound(ptsFloating));
+         else
+            plStr = StringFormat("▲ +%.2f (Hedged)", symbolPL);
+      }
+      else
+         plStr = StringFormat("▲ +%.2f (0 pts)", symbolPL);
+   }
+   else if(symbolPL < -0.005)
+   {
+      plColor = gClrDanger;
+      if(buyLots > 0 || sellLots > 0)
+      {
+         if(pointValueTotal > 0)
+            plStr = StringFormat("▼ %.2f (%d pts)", symbolPL, (int)MathRound(ptsFloating));
+         else
+            plStr = StringFormat("▼ %.2f (Hedged)", symbolPL);
+      }
+      else
+         plStr = StringFormat("▼ %.2f (0 pts)", symbolPL);
+   }
+   else
+   {
+      plColor = gClrValue;
+      plStr = "0.00 (0 pts)";
+   }
+   SetVal(PREFIX + "Sym_PLVal", plStr, plColor);
 
    // Risk Analysis Calculations
    double margin = AccountInfoDouble(ACCOUNT_MARGIN);
@@ -691,12 +738,6 @@ void UpdateInfoSection()
          double equityToSO = equity - equitySO;
          eqToSOStr = DoubleToString(equityToSO, 2);
 
-         double netLots = buyLots - sellLots;
-         double tickSize = SymbolInfoDouble(_Symbol, SYMBOL_TRADE_TICK_SIZE);
-         double tickValue = SymbolInfoDouble(_Symbol, SYMBOL_TRADE_TICK_VALUE);
-         double pointValuePerLot = (tickSize > 0) ? tickValue * (myPoint / tickSize) : myPoint;
-         double pointValueTotal = MathAbs(netLots) * pointValuePerLot;
-
          if(pointValueTotal > 0)
          {
             double ptsToSO = equityToSO / pointValueTotal;
@@ -718,8 +759,8 @@ void UpdateInfoSection()
       }
    }
 
-   SetVal(PREFIX + "Sym_BuyExpVal", buyExpStr, gClrValue);
-   SetVal(PREFIX + "Sym_SellExpVal", sellExpStr, gClrValue);
+   SetVal(PREFIX + "Sym_BuyExpVal", buyExpStr, buyLots > 0 ? gClrSuccess : gClrValue);
+   SetVal(PREFIX + "Sym_SellExpVal", sellExpStr, sellLots > 0 ? gClrDanger : gClrValue);
    SetVal(PREFIX + "Acc_MLVal", marginLevelStr, riskColor);
    SetVal(PREFIX + "Acc_SOEqVal", eqToSOStr, riskColor);
    SetVal(PREFIX + "Sym_SOPriceVal", stopOutPriceStr, riskColor);
@@ -917,13 +958,13 @@ void ExecuteTradingLogic()
    }
    else
    {
-      // ========== We have a fresh closed deal ====================
-      // Mark it as processed so we don't double-fire
+      // ========== Kita baru saja menyelesaikan kesepakatan ====================
+      // Tandai itu sebagai sudah diproses/selesai supaya kita tidak mengirim/menjalankan dua kali
       if(lastDealTicket == (ulong)g_lastDeal) return;
       g_lastDeal = (int)lastDealTicket;
       
-      // Determine Martingale step from loss streak
-      // Scan last deals until a profitable one to count consecutive losses
+      // Tentukan besarnya langkah Martingale berdasarkan dari rentetan kekalahan
+      // Lihat ke belakang dari transaksi terakhir hingga menemukan transaksi yang menguntungkan untuk menghitung kerugian beruntun
       HistorySelect(TimeCurrent() - 30*24*3600, TimeCurrent());
       int total         = HistoryDealsTotal();
       int lossStreak    = 0;
@@ -967,7 +1008,7 @@ void ExecuteTradingLogic()
          {
             // Max steps reached â†’ reset
             nextLot = InpLot;
-            Print("IndoDev EA: Max Martingale Steps reached â€“ resetting to base lot.");
+            Print("GubukTrader EA: Max Martingale Steps reached â€“ resetting to base lot.");
          }
       }
    }
@@ -978,7 +1019,7 @@ void ExecuteTradingLogic()
    nextLot = MathMax(nextLot, minLot);
    nextLot = NormalizeDouble(MathRound(nextLot / stepLot) * stepLot, 2);
    
-   string comment = StringFormat("IndoDev|Step%d|Lot%.2f", lossStreak_or_new(), nextLot);
+   string comment = StringFormat("GubukTrader|Step%d|Lot%.2f", lossStreak_or_new(), nextLot);
    PlaceOrder(nextType, nextLot, comment);
 }
 
