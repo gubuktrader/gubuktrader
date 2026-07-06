@@ -1,6 +1,6 @@
 //+------------------------------------------------------------------+
 //|                                                  GubukTrader.mq5 |
-//|                          Copyright 2026, Mochamad Tabrani & Grok |
+//|                          Copyright 2026, MOCHAMAD TABRANI & Grok |
 //|                                          https://cindo.pages.dev |
 //+------------------------------------------------------------------+
 #property copyright   "MOCHAMAD TABRANI (c) 2026, Ringin Bambu"
@@ -454,11 +454,11 @@ void CreateAboutTab(int y)
    CreateRect(PREFIX + "AboutBg", X_Offset + 4, y, Panel_Width - 8, 340, gClrStripe);
    
    int lineY = y + 20;
-   CreateLabel(PREFIX + "Ab_Title", contentX, lineY, "GT SYSTEM - QUAD-BAR PROFESSIONAL", gClrAccent, 11);
+   CreateLabel(PREFIX + "Ab_Title", contentX, lineY, "UNTUK MENJADI BAHAGIA DALAM TRADING", gClrAccent, 11);
    lineY += 30;
-   CreateLabel(PREFIX + "Ab_Desc1", contentX, lineY, "Sistem analisis matematika pasar berdasarkan riwayat 4 GT .", clrWhite, 9);
+   CreateLabel(PREFIX + "Ab_Desc1", contentX, lineY, "Anda harus menghilangkan dua hal: Ketakutan akan masa depan yang buruk dan kenangan akan masa lalu yang buruk", clrWhite, 9);
    lineY += 20;
-   CreateLabel(PREFIX + "Ab_Desc2", contentX, lineY, "Mendeteksi Inti (Volume) dan Jangkauan (Volatility) secara real-time.", clrWhite, 9);
+   CreateLabel(PREFIX + "Ab_Desc2", contentX, lineY, "Jika tidak mengikuti jalan yang benar sampai akhir, sedikit kesalahan di awal berubah menjadi penyimpangan besar", clrWhite, 9);
    
    lineY += 40;
    CreateLabel(PREFIX + "Ab_DevLabel", contentX, lineY, "Developed by:", gClrLabel, 8);
@@ -468,11 +468,11 @@ void CreateAboutTab(int y)
    CreateLabel(PREFIX + "Ab_VerVal", contentX + 120, lineY, "0.01 Professional", gClrValue, 8);
    lineY += 20;
    CreateLabel(PREFIX + "Ab_Method", contentX, lineY, "Methodology:", gClrLabel, 8);
-   CreateLabel(PREFIX + "Ab_MethodVal", contentX + 120, lineY, "Grafik Tabrani (GT) Market Math", gClrValue, 8);
+   CreateLabel(PREFIX + "Ab_MethodVal", contentX + 120, lineY, "Grafik Tabranij (GT) Matematika Pasar", gClrValue, 8);
    
    lineY += 50;
    CreateRect(PREFIX + "Ab_Box", contentX, lineY, contentW, 100, gClrBg, clrSilver);
-   CreateLabel(PREFIX + "Ab_Status", contentX + 10, lineY + 10, "SYSTEM STATUS: OPERATIONAL", gClrSuccess, 9);
+   CreateLabel(PREFIX + "Ab_Status", contentX + 10, lineY + 10, "STATUS SISTEM: OPERASIONAL", gClrSuccess, 9);
    CreateLabel(PREFIX + "Ab_Lince", contentX + 10, lineY + 30, "License: RINGIN BAMBU Juli 2026", clrSilver, 8);
    CreateLabel(PREFIX + "Ab_Support", contentX + 10, lineY + 70, "Support: mql5.com/getbos | t.me/ringinbambu", gClrAccent, 8);
 }
@@ -499,7 +499,7 @@ void CreateTradingTab(int y)
    CreateLabel(PREFIX + "Tr_TPV", contentX + 150, lineY, IntegerToString(InpTP) + " / " + IntegerToString(InpSL) + " pts", gClrValue, 9);
    
    lineY += 50;
-   CreateLabel(PREFIX + "Tr_Note", contentX, lineY, "Notes: To change these values, please use the standard", clrSilver, 8);
+   CreateLabel(PREFIX + "Tr_Note", contentX, lineY, "Catatan: Untuk mengubah nilai-nilai ini, silakan gunakan standar", clrSilver, 8);
    lineY += 15;
    CreateLabel(PREFIX + "Tr_Note2", contentX, lineY, "Expert Advisor Properties (F7 -> Inputs).", clrSilver, 8);
 }
@@ -510,7 +510,7 @@ void CreateColorsTab(int y)
    int lineY = y + 20;
    int centerX = X_Offset + Panel_Width/2;
    
-   CreateLabel(PREFIX + "Cl_Title", centerX, lineY, "PILIH TEMA TAMPILAN", gClrAccent, 11, FONT_MAIN, ANCHOR_CENTER);
+   CreateLabel(PREFIX + "Cl_Title", centerX, lineY, "PILIH TAMPILAN TEMA", gClrAccent, 11, FONT_MAIN, ANCHOR_CENTER);
    lineY += 50;
    
    int btnW = 180, btnH = 35;
@@ -539,7 +539,7 @@ void CreateVisualTab(int y)
    CreateButton(PREFIX + "TOG_CHART", centerX, lineY, 220, 40, toggleText, clrWhite, toggleBg);
    
    lineY += 80;
-   CreateLabel(PREFIX + "Vs_Desc", centerX, lineY, "Mengaktifkan/menonaktifkan penggambaran garis GT secara langsung", clrWhite, 9, FONT_MAIN, ANCHOR_CENTER);
+   CreateLabel(PREFIX + "Vs_Desc", centerX, lineY, "Mengaktifkan/menonaktifkan tampilan garis GT secara langsung", clrWhite, 9, FONT_MAIN, ANCHOR_CENTER);
    lineY += 20;
    CreateLabel(PREFIX + "Vs_Desc2", centerX, lineY, "(Tinggi, Rendah, Awal, Inti) di grafik.", clrWhite, 9, FONT_MAIN, ANCHOR_CENTER);
 }
@@ -837,7 +837,7 @@ void UpdateCountdown()
    else
       cdColor = COLOR_COUNTDOWN;       // Amber Gold normal
    
-   SetVal(PREFIX + "CountdownIcon", "p", cdColor);
+   SetVal(PREFIX + "CountdownIcon", "a", cdColor);
    SetVal(PREFIX + "Countdown", countdownText, cdColor);
    ChartRedraw();
 }
