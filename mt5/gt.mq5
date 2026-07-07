@@ -1,5 +1,5 @@
 //+------------------------------------------------------------------+
-//|                                                  GubukTrader.mq5 |
+//|                                                   GubukSaldo.mq5 |
 //|                          Copyright 2026, MOCHAMAD TABRANI & Grok |
 //|                                          https://cindo.pages.dev |
 //+------------------------------------------------------------------+
@@ -8,7 +8,7 @@
 #property version     "0.01"
 #property description "EA GT Trading - Komando Profit & Keamanan"
 #property description "========================================================"
-#property description "EA Trading Gubuk Trader beroperasi berdasarkan Sinyal GT Besar."
+#property description "EA Trading Gubuk Saldo beroperasi berdasarkan Sinyal GT Besar."
 #property description "Didesain spesifik untuk volatilitas tinggi (BTCUSD, XAUUSD, GOLDmicro)."
 
 //+------------------------------------------------------------------+
@@ -32,9 +32,9 @@ enum ENUM_THEME
 //+------------------------------------------------------------------+
 
 //--- System Information
-input string          _s0                  = "================= EA GUBUK TRADER GT TRADING ================="; 
-sinput string         Info_System          = "EA Gubuk Trader GT Trading "; 
-sinput string         Info_Version         = "v0.01 [Gubuk Trader]"; 
+input string          _s0                  = "================= EA GUBUK SALDO GT TRADING ================="; 
+sinput string         Info_System          = "EA Gubuk Saldo GT Trading "; 
+sinput string         Info_Version         = "v0.01 [Gubuk Saldo]"; 
 sinput string         Info_Author          = "MOCHAMAD TABRANI";                  
 sinput string         Info_Support         = "cindo.pages.dev";   
 
@@ -45,7 +45,7 @@ input int             Y_Offset             = 40;       // Vertical Offset (Pixel
 input int             Panel_Width          = 600;      // Total Dashboard Width
 
 //--- Trading Engine Settings
-input string          _s2                  = "================= GUBUK TRADER ALGO STRATEGY =================";
+input string          _s2                  = "================= GUBUK SALDO ALGO STRATEGY =================";
 input ENUM_TIMEFRAMES InpGTTimeframe       = PERIOD_H1;     // GT Besar Timeframe/durasi (Signal Basis)
 input double          InpLot               = 0.01;          // Base Lot Volume
 input double          InpMultiplier        = 2.0;           // Martingale Volume Multiplier
@@ -381,7 +381,7 @@ void CreateDashboardTab(int y)
    // Header Area
    int centerX = X_Offset + (Panel_Width / 2);
    CreateRect(PREFIX + "Hdr", X_Offset + 4, y, Panel_Width - 8, 45, gClrHdr);
-   CreateLabel(PREFIX + "Title", centerX, y + 15, "GUBUK TRADER", gClrAccent, 11, FONT_MAIN, ANCHOR_CENTER);
+   CreateLabel(PREFIX + "Title", centerX, y + 15, "GUBUK SALDO", gClrAccent, 11, FONT_MAIN, ANCHOR_CENTER);
    y += 50;
    
    // Column Titles
@@ -413,7 +413,7 @@ void UpdateInfoSectionOnDashboard(int y)
    int infoY = y + 10;
    
    // Row 1: Balance & Equity
-   CreateLabel(PREFIX + "Acc_Bal", X_Offset + 20, infoY, "Balance:", gClrLabel, 8);
+   CreateLabel(PREFIX + "Acc_Bal", X_Offset + 20, infoY, "Saldo:", gClrLabel, 8);
    CreateLabel(PREFIX + "Acc_BalVal", X_Offset + 130, infoY, "0.00", gClrValue, 8);
    CreateLabel(PREFIX + "Acc_Eq", X_Offset + Panel_Width/2, infoY, "Equity:", gClrLabel, 8);
    CreateLabel(PREFIX + "Acc_EqVal", X_Offset + Panel_Width - 20, infoY, "0.00", gClrValue, 8, FONT_MAIN, ANCHOR_RIGHT_UPPER);
@@ -456,9 +456,9 @@ void CreateAboutTab(int y)
    int lineY = y + 20;
    CreateLabel(PREFIX + "Ab_Title", contentX, lineY, "UNTUK MENJADI BAHAGIA DALAM TRADING", gClrAccent, 11);
    lineY += 30;
-   CreateLabel(PREFIX + "Ab_Desc1", contentX, lineY, "Anda harus menghilangkan dua hal: Ketakutan akan masa depan yang buruk dan kenangan akan masa lalu yang buruk", clrWhite, 9);
+   CreateLabel(PREFIX + "Ab_Desc1", contentX, lineY, "Anda harus menghilangkan dua hal:", clrWhite, 9);
    lineY += 20;
-   CreateLabel(PREFIX + "Ab_Desc2", contentX, lineY, "Jika tidak mengikuti jalan yang benar sampai akhir, sedikit kesalahan di awal berubah menjadi penyimpangan besar", clrWhite, 9);
+   CreateLabel(PREFIX + "Ab_Desc2", contentX, lineY, "Ketakutan akan masa depan yang buruk dan kenangan akan masa lalu yang buruk", clrWhite, 9);
    
    lineY += 40;
    CreateLabel(PREFIX + "Ab_DevLabel", contentX, lineY, "Developed by:", gClrLabel, 8);
@@ -499,7 +499,7 @@ void CreateTradingTab(int y)
    CreateLabel(PREFIX + "Tr_TPV", contentX + 150, lineY, IntegerToString(InpTP) + " / " + IntegerToString(InpSL) + " pts", gClrValue, 9);
    
    lineY += 50;
-   CreateLabel(PREFIX + "Tr_Note", contentX, lineY, "Catatan: Untuk mengubah nilai-nilai ini, silakan gunakan standar", clrSilver, 8);
+   CreateLabel(PREFIX + "Tr_Note", contentX, lineY, "Catatan: Untuk mengubah nilai ini, silakan gunakan standar", clrSilver, 8);
    lineY += 15;
    CreateLabel(PREFIX + "Tr_Note2", contentX, lineY, "Expert Advisor Properties (F7 -> Inputs).", clrSilver, 8);
 }
@@ -541,7 +541,7 @@ void CreateVisualTab(int y)
    lineY += 80;
    CreateLabel(PREFIX + "Vs_Desc", centerX, lineY, "Mengaktifkan/menonaktifkan tampilan garis GT secara langsung", clrWhite, 9, FONT_MAIN, ANCHOR_CENTER);
    lineY += 20;
-   CreateLabel(PREFIX + "Vs_Desc2", centerX, lineY, "(Tinggi, Rendah, Awal, Inti) di grafik.", clrWhite, 9, FONT_MAIN, ANCHOR_CENTER);
+   CreateLabel(PREFIX + "Vs_Desc2", centerX, lineY, "(Tinggi, Rendah, Awal, Inti) di grafik tabranij.", clrWhite, 9, FONT_MAIN, ANCHOR_CENTER);
 }
 
 bool CreateTabButton(string name, int x, int y, int w, int h, string text, bool active)
@@ -837,7 +837,7 @@ void UpdateCountdown()
    else
       cdColor = COLOR_COUNTDOWN;       // Amber Gold normal
    
-   SetVal(PREFIX + "CountdownIcon", "a", cdColor);
+   SetVal(PREFIX + "CountdownIcon", "p", cdColor);
    SetVal(PREFIX + "Countdown", countdownText, cdColor);
    ChartRedraw();
 }
@@ -937,7 +937,7 @@ void ExecuteTradingLogic()
    if(lastDealTicket == 0 || lastDealTicket == (ulong)g_lastDeal)
    {
       // ========== FIRST TRADE ever (or already processed) ==========
-      // Read GT Nilai from the InpGTTimeframe last closed bar
+      // Read GT Neto from the InpGTTimeframe last closed bar
       double lastOpen  = iOpen(_Symbol,  InpGTTimeframe, 1);
       double lastClose = iClose(_Symbol, InpGTTimeframe, 1);
       
@@ -951,7 +951,7 @@ void ExecuteTradingLogic()
       else if(lastClose < lastOpen)
          nextType = POSITION_TYPE_SELL;
       else
-         return; // doji candle â€“ no signal
+         return; // doji GT â€“ no signal
       
       nextLot = InpLot;
       g_isFirstTrade = false;
@@ -1008,7 +1008,7 @@ void ExecuteTradingLogic()
          {
             // Max steps reached â†’ reset
             nextLot = InpLot;
-            Print("GubukTrader EA: Max Martingale Steps reached â€“ resetting to base lot.");
+            Print("GubukSaldo EA: Max Martingale Steps reached â€“ resetting to base lot.");
          }
       }
    }
@@ -1019,7 +1019,7 @@ void ExecuteTradingLogic()
    nextLot = MathMax(nextLot, minLot);
    nextLot = NormalizeDouble(MathRound(nextLot / stepLot) * stepLot, 2);
    
-   string comment = StringFormat("GubukTrader|Step%d|Lot%.2f", lossStreak_or_new(), nextLot);
+   string comment = StringFormat("GubukSaldo|Step%d|Lot%.2f", lossStreak_or_new(), nextLot);
    PlaceOrder(nextType, nextLot, comment);
 }
 
