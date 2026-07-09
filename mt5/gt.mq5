@@ -171,8 +171,18 @@ int OnInit()
    myPoint  = _Point;
    myDigits = _Digits;
    
-   extTheme = InpTheme;
-   extShowGTChart = InpShowGTChart;
+   // Load persistent settings from Terminal Global Variables if they exist
+   string themeGV = PREFIX + "_" + _Symbol + "_" + IntegerToString(InpMagic) + "_THEME";
+   if(GlobalVariableCheck(themeGV))
+      extTheme = (ENUM_THEME)GlobalVariableGet(themeGV);
+   else
+      extTheme = InpTheme;
+      
+   string showChartGV = PREFIX + "_" + _Symbol + "_" + IntegerToString(InpMagic) + "_SHOWCHART";
+   if(GlobalVariableCheck(showChartGV))
+      extShowGTChart = (bool)GlobalVariableGet(showChartGV);
+   else
+      extShowGTChart = InpShowGTChart;
    
    // Calculate offset between Server Time and Local Machine Time
    serverLocalOffset = (long)TimeCurrent() - (long)TimeLocal();
@@ -191,7 +201,22 @@ int OnInit()
    return(INIT_SUCCEEDED);
 }
 
-void OnDeinit(const int reason) { EventKillTimer(); DeleteAllObjects(); DeleteVisualization(); }
+void OnDeinit(const int reason) 
+{ 
+   EventKillTimer(); 
+   DeleteAllObjects(); 
+   DeleteVisualization(); 
+   
+   // Clean up Global Variables only if the EA is explicitly removed or chart is closed
+   if(reason == REASON_REMOVE || reason == REASON_CLOSE)
+   {
+      string themeGV = PREFIX + "_" + _Symbol + "_" + IntegerToString(InpMagic) + "_THEME";
+      string showChartGV = PREFIX + "_" + _Symbol + "_" + IntegerToString(InpMagic) + "_SHOWCHART";
+      GlobalVariableDel(themeGV);
+      GlobalVariableDel(showChartGV);
+   }
+}
+
 void OnTick()                    
 { 
    UpdateGUILabels(); 
@@ -215,13 +240,43 @@ void OnChartEvent(const int id, const long& lparam, const double& dparam, const 
       else if(sparam == PREFIX + "TAB_VS") { currTab = TAB_VISUAL;    ResetDashboard(); }
       
       // Theme Switching Logic (from Colors Tab)
-      else if(sparam == PREFIX + "THM_ONYX")  { extTheme = THEME_ONYX_GOLD; ApplyTheme(); ResetDashboard(); }
-      else if(sparam == PREFIX + "THM_NEON")  { extTheme = THEME_NEON_BLUE; ApplyTheme(); ResetDashboard(); }
-      else if(sparam == PREFIX + "THM_MATRIX") { extTheme = THEME_MATRIX;    ApplyTheme(); ResetDashboard(); }
-      else if(sparam == PREFIX + "THM_DARK")   { extTheme = THEME_PURE_DARK;  ApplyTheme(); ResetDashboard(); }
+      else if(sparam == PREFIX + "THM_ONYX")  
+      { 
+         extTheme = THEME_ONYX_GOLD; 
+         GlobalVariableSet(PREFIX + "_" + _Symbol + "_" + IntegerToString(InpMagic) + "_THEME", extTheme);
+         ApplyTheme(); 
+         ResetDashboard(); 
+      }
+      else if(sparam == PREFIX + "THM_NEON")  
+      { 
+         extTheme = THEME_NEON_BLUE; 
+         GlobalVariableSet(PREFIX + "_" + _Symbol + "_" + IntegerToString(InpMagic) + "_THEME", extTheme);
+         ApplyTheme(); 
+         ResetDashboard(); 
+      }
+      else if(sparam == PREFIX + "THM_MATRIX") 
+      { 
+         extTheme = THEME_MATRIX;    
+         GlobalVariableSet(PREFIX + "_" + _Symbol + "_" + IntegerToString(InpMagic) + "_THEME", extTheme);
+         ApplyTheme(); 
+         ResetDashboard(); 
+      }
+      else if(sparam == PREFIX + "THM_DARK")   
+      { 
+         extTheme = THEME_PURE_DARK;  
+         GlobalVariableSet(PREFIX + "_" + _Symbol + "_" + IntegerToString(InpMagic) + "_THEME", extTheme);
+         ApplyTheme(); 
+         ResetDashboard(); 
+      }
       
       // Visual Toggles
-      else if(sparam == PREFIX + "TOG_CHART") { extShowGTChart = !extShowGTChart; if(!extShowGTChart) DeleteVisualization(); ResetDashboard(); }
+      else if(sparam == PREFIX + "TOG_CHART") 
+      { 
+         extShowGTChart = !extShowGTChart; 
+         GlobalVariableSet(PREFIX + "_" + _Symbol + "_" + IntegerToString(InpMagic) + "_SHOWCHART", extShowGTChart);
+         if(!extShowGTChart) DeleteVisualization(); 
+         ResetDashboard(); 
+      }
       
       // (No object-based logic in GrafikTabranij mode)
    }
