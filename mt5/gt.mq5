@@ -390,7 +390,7 @@ void CreateDashboardTab(int y)
    CreateLabel(PREFIX + "C3", X_Offset + dataStart + colW,     y, "[ GT3 ]", clrAqua, 8, FONT_MAIN, ANCHOR_RIGHT_UPPER);
    CreateLabel(PREFIX + "C2", X_Offset + dataStart + colW*2,   y, "[ GT2 ]", clrAqua, 8, FONT_MAIN, ANCHOR_RIGHT_UPPER);
    CreateLabel(PREFIX + "C1", X_Offset + dataStart + colW*3,   y, "[ GT1 ]", clrAqua, 8, FONT_MAIN, ANCHOR_RIGHT_UPPER);
-   CreateLabel(PREFIX + "C0", X_Offset + dataStart + colW*4,   y, "[ LIVE ]", gClrAccent, 8, FONT_MAIN, ANCHOR_RIGHT_UPPER);
+   CreateLabel(PREFIX + "C0", X_Offset + dataStart + colW*4,   y, "[ GT LIVE ]", gClrAccent, 8, FONT_MAIN, ANCHOR_RIGHT_UPPER);
    CreateLabel(PREFIX + "CountdownIcon", X_Offset + dataStart + colW*4 - 55, y + 14, "p", COLOR_COUNTDOWN, 9, "Webdings", ANCHOR_RIGHT_UPPER);
    CreateLabel(PREFIX + "Countdown", X_Offset + dataStart + colW*4, y + 13, "00:00:00", COLOR_COUNTDOWN, 8, FONT_MAIN, ANCHOR_RIGHT_UPPER);
    y += 30;
