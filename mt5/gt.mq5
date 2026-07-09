@@ -81,7 +81,7 @@ double   g_lastLot      = 0;  // Volume dari posisi terakhir yang ditutup
 int      g_lastDeal      = -1; // Ticket deal terakhir yang telah diproses
 bool     g_isFirstTrade = true; // Flag untuk perdagangan pertama
 
-#define PREFIX          "GUBUKTRADER"
+#define PREFIX          "GRAFIKTABRANIJ"
 #define COLOR_BG        C'10,10,10'    // Jet Black
 #define COLOR_STRIPE    C'18,18,18'    // Subtle Stripe
 #define COLOR_HDR_BG    C'35,35,35'    // Slate
