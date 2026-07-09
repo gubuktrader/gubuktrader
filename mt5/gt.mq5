@@ -348,7 +348,7 @@ void ResetDashboard() { DeleteAllObjects(); CreateDashboard(); }
 bool CreateDashboard()
 {
    int y = Y_Offset;
-   int totalH = (currTab == TAB_DASHBOARD) ? 515 : 410;
+   int totalH = (currTab == TAB_DASHBOARD) ? 525 : 410;
 
    CreateRect(PREFIX + "Main", X_Offset, y, Panel_Width, totalH, gClrBg, clrDimGray);
    CreateCornerBrackets(X_Offset - 2, y - 2, Panel_Width + 4, totalH + 4, 15, gClrAccent);
@@ -391,9 +391,9 @@ void CreateDashboardTab(int y)
    CreateLabel(PREFIX + "C2", X_Offset + dataStart + colW*2,   y, "[ GT2 ]", clrAqua, 8, FONT_MAIN, ANCHOR_RIGHT_UPPER);
    CreateLabel(PREFIX + "C1", X_Offset + dataStart + colW*3,   y, "[ GT1 ]", clrAqua, 8, FONT_MAIN, ANCHOR_RIGHT_UPPER);
    CreateLabel(PREFIX + "C0", X_Offset + dataStart + colW*4,   y, "[ GT LIVE ]", gClrAccent, 8, FONT_MAIN, ANCHOR_RIGHT_UPPER);
-   CreateLabel(PREFIX + "CountdownIcon", X_Offset + dataStart + colW*4 - 55, y + 14, "p", COLOR_COUNTDOWN, 9, "Webdings", ANCHOR_RIGHT_UPPER);
-   CreateLabel(PREFIX + "Countdown", X_Offset + dataStart + colW*4, y + 13, "00:00:00", COLOR_COUNTDOWN, 8, FONT_MAIN, ANCHOR_RIGHT_UPPER);
-   y += 30;
+   CreateLabel(PREFIX + "CountdownIcon", X_Offset + dataStart + colW*4 - 55, y + 24, "p", COLOR_COUNTDOWN, 9, "Webdings", ANCHOR_RIGHT_UPPER);
+   CreateLabel(PREFIX + "Countdown", X_Offset + dataStart + colW*4, y + 23, "00:00:00", COLOR_COUNTDOWN, 8, FONT_MAIN, ANCHOR_RIGHT_UPPER);
+   y += 40;
 
    CreateQuadBarRow(PREFIX + "R_OH",    y, "Tinggi");    y += ROW_H;
    CreateQuadBarRow(PREFIX + "R_CH",    y, "Atas");      y += ROW_H;
@@ -714,9 +714,9 @@ void UpdateInfoSection()
    string sellPriceStr = DoubleToString(avgSellPrice, dispDigits);
 
    if(buyLots > 0)
-      buyExpStr = StringFormat("%.2f @ %s", buyLots, buyPriceStr);
+      buyExpStr = StringFormat("%.2f @ %s ▲", buyLots, buyPriceStr);
    if(sellLots > 0)
-      sellExpStr = StringFormat("%.2f @ %s", sellLots, sellPriceStr);
+      sellExpStr = StringFormat("%.2f @ %s ▼", sellLots, sellPriceStr);
 
    if(buyLots > 0 || sellLots > 0)
    {
@@ -786,7 +786,8 @@ void UpdateBarData(int shift, string suffix, color baseClr)
    SetVal(PREFIX + "R_CL" + suffix, StringFormat("%d", cl), baseClr);
    SetVal(PREFIX + "R_OL" + suffix, DoubleToString(low, myDigits), baseClr);
    SetVal(PREFIX + "R_Awal" + suffix, DoubleToString(open, myDigits), baseClr);
-   SetVal(PREFIX + "R_OC" + suffix, StringFormat("%d", oc), oc >= 0 ? gClrSuccess : gClrDanger);
+   string ocStr = oc >= 0 ? StringFormat("%d ▲", oc) : StringFormat("%d ▼", -oc);
+   SetVal(PREFIX + "R_OC" + suffix, ocStr, oc >= 0 ? gClrSuccess : gClrDanger);
    SetVal(PREFIX + "R_LH" + suffix, DoubleToString(close, myDigits), baseClr);
    SetVal(PREFIX + "R_Range" + suffix, StringFormat("%d", lh), baseClr);
 }
@@ -915,7 +916,7 @@ bool PlaceOrder(ENUM_POSITION_TYPE type, double lot, string comment)
       Print("Escindo EA: Order open [", (type == POSITION_TYPE_BUY ? "BUY" : "SELL"),
             "] Lot:", DoubleToString(lot,2), " | ", comment);
    else
-      Print("Escindo EA: Order FAILED â€“ ", trade.ResultRetcodeDescription());
+      Print("GT EA: Order FAILED – ", trade.ResultRetcodeDescription());
    
    return result;
 }
@@ -951,7 +952,7 @@ void ExecuteTradingLogic()
       else if(lastClose < lastOpen)
          nextType = POSITION_TYPE_SELL;
       else
-         return; // doji GT â€“ no signal
+         return; // doji GT – no signal
       
       nextLot = InpLot;
       g_isFirstTrade = false;
@@ -987,7 +988,7 @@ void ExecuteTradingLogic()
             if(lossStreak >= InpMaxSteps) break;
          }
          else
-            break; // profitable deal found â†’ reset streak
+            break; // profitable deal found → reset streak
       }
       
       if(lastProfit >= 0)
@@ -1006,9 +1007,9 @@ void ExecuteTradingLogic()
             nextLot = NormalizeDouble(InpLot * MathPow(InpMultiplier, lossStreak), 2);
          else
          {
-            // Max steps reached â†’ reset
+            // Max steps reached → reset
             nextLot = InpLot;
-            Print("GT EA: Max Martingale Steps reached â€“ resetting to base lot.");
+            Print("GT EA: Max Martingale Steps reached – resetting to base lot.");
          }
       }
    }
