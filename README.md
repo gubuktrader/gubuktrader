@@ -11,13 +11,13 @@
 **I**nformasi  
 **K**euangan  
 
-**T**inggi {range}
-**A**tas {kodomain}
-**B**awah {kodomain}
-**R**endah {range}
+**T**inggi {range} 
+**A**tas {kodomain} 
+**B**awah {kodomain} 
+**R**endah {range} 
 **A**wal {konstanta} 
-**N**eto {domain}
-**I**nti {variabel} 
+**N**eto {domain} 
+**I**nti {variabel}  
 **J**angkauan {himpunan}
 
 ---
