@@ -1,4 +1,4 @@
-# Grafik Tabrani J
+# Grafik Tabranij
 
 **Representasi Visual Dinamis untuk Analisis Pergerakan Harga**
 
