@@ -5,7 +5,7 @@
 //+------------------------------------------------------------------+
 #property copyright   "MOCHAMAD TABRANI (c) 2026, Ringin Bambu"
 #property link        "https://cindo.pages.dev"
-#property version     "0.01"
+#property version     "1.00"
 #property description "EA GT Trading - Komando Profit & Keamanan"
 #property description "========================================================"
 #property description "EA Trading ini beroperasi berdasarkan Sinyal GT Besar."
@@ -82,12 +82,13 @@ int      g_lastDeal      = -1; // Ticket deal terakhir yang telah diproses
 bool     g_isFirstTrade = true; // Flag untuk perdagangan pertama
 
 #define PREFIX          "GRAFIKTABRANIJ"
-#define COLOR_BG        C'10,10,10'    // Jet Black
-#define COLOR_STRIPE    C'18,18,18'    // Subtle Stripe
-#define COLOR_HDR_BG    C'35,35,35'    // Slate
+#define COLOR_BG        C'45,45,45'    // Charcoal Grey (matching the image)
+#define COLOR_STRIPE    C'35,35,35'    // Darker Grey for stripes/alternating rows
+#define COLOR_HDR_BG    C'65,65,65'    // Lighter Slate Grey for headers (matching the image)
 #define COLOR_SUCCESS   C'0,255,140'   // Emerald
 #define COLOR_DANGER    C'255,80,90'   // Ruby
 #define COLOR_SILVER    C'180,180,180' // Muted Silver
+#define COLOR_BORDER    C'85,85,85'    // Silver/Grey for borders
 
 #define ROW_H           30
 #define FONT_MAIN       "Segoe UI"
@@ -106,7 +107,7 @@ enum ENUM_TABS {
 ENUM_TABS currTab = TAB_DASHBOARD;
 
 // Global Color Theme Variables
-color gClrBg, gClrHdr, gClrStripe, gClrLabel, gClrValue, gClrAccent, gClrSuccess, gClrDanger;
+color gClrBg, gClrHdr, gClrStripe, gClrLabel, gClrValue, gClrAccent, gClrSuccess, gClrDanger, gClrBorder;
 
 // Runtime Modifiable Settings (Mirrored from Inputs)
 ENUM_THEME   extTheme;
@@ -128,6 +129,7 @@ void ApplyTheme()
          gClrAccent  = clrDeepSkyBlue;
          gClrSuccess = clrSpringGreen;
          gClrDanger  = clrDeepPink;
+         gClrBorder  = C'20,50,80';
          break;
       case THEME_MATRIX:
          gClrBg      = C'0,10,0';
@@ -138,6 +140,7 @@ void ApplyTheme()
          gClrAccent  = clrGreen;
          gClrSuccess = clrWhite;
          gClrDanger  = clrRed;
+         gClrBorder  = C'0,40,0';
          break;
       case THEME_PURE_DARK:
          gClrBg      = C'15,15,15';
@@ -148,6 +151,7 @@ void ApplyTheme()
          gClrAccent  = clrGray;
          gClrSuccess = clrAliceBlue;
          gClrDanger  = clrIndianRed;
+         gClrBorder  = C'35,35,35';
          break;
       case THEME_ONYX_GOLD:
       default:
@@ -159,6 +163,7 @@ void ApplyTheme()
          gClrAccent  = clrGold;
          gClrSuccess = COLOR_SUCCESS;
          gClrDanger  = COLOR_DANGER;
+         gClrBorder  = COLOR_BORDER;
          break;
    }
 }
@@ -171,7 +176,6 @@ int OnInit()
    myPoint  = _Point;
    myDigits = _Digits;
    
-   // Load persistent settings from Terminal Global Variables if they exist
    string themeGV = PREFIX + "_" + _Symbol + "_" + IntegerToString(InpMagic) + "_THEME";
    if(GlobalVariableCheck(themeGV))
       extTheme = (ENUM_THEME)GlobalVariableGet(themeGV);
@@ -184,7 +188,6 @@ int OnInit()
    else
       extShowGTChart = InpShowGTChart;
    
-   // Calculate offset between Server Time and Local Machine Time
    serverLocalOffset = (long)TimeCurrent() - (long)TimeLocal();
 
    ApplyTheme();
@@ -197,7 +200,7 @@ int OnInit()
    }
 
    trade.SetExpertMagicNumber(InpMagic);
-   EventSetTimer(1); // Update countdown setiap 1 detik
+   EventSetTimer(1);
    return(INIT_SUCCEEDED);
 }
 
@@ -207,7 +210,6 @@ void OnDeinit(const int reason)
    DeleteAllObjects(); 
    DeleteVisualization(); 
    
-   // Clean up Global Variables only if the EA is explicitly removed or chart is closed
    if(reason == REASON_REMOVE || reason == REASON_CLOSE)
    {
       string themeGV = PREFIX + "_" + _Symbol + "_" + IntegerToString(InpMagic) + "_THEME";
@@ -220,56 +222,45 @@ void OnDeinit(const int reason)
 void OnTick()                    
 { 
    UpdateGUILabels(); 
-   
-   // Sequential State Machine - check every tick for empty position
    ExecuteTradingLogic();
-   
    if(extShowGTChart) DrawGTLevels();
 }
-void OnTimer()                   { UpdateCountdown(); }
+
+void OnTimer() { UpdateCountdown(); }
 
 void OnChartEvent(const int id, const long& lparam, const double& dparam, const string& sparam)
 {
    if(id == CHARTEVENT_OBJECT_CLICK)
    {
-      // Tab Switching Logic
       if(sparam == PREFIX + "TAB_DB") { currTab = TAB_DASHBOARD; ResetDashboard(); }
       else if(sparam == PREFIX + "TAB_AB") { currTab = TAB_ABOUT;     ResetDashboard(); }
       else if(sparam == PREFIX + "TAB_TR") { currTab = TAB_TRADING;   ResetDashboard(); }
       else if(sparam == PREFIX + "TAB_CL") { currTab = TAB_COLORS;    ResetDashboard(); }
       else if(sparam == PREFIX + "TAB_VS") { currTab = TAB_VISUAL;    ResetDashboard(); }
-      
-      // Theme Switching Logic (from Colors Tab)
       else if(sparam == PREFIX + "THM_ONYX")  
       { 
          extTheme = THEME_ONYX_GOLD; 
          GlobalVariableSet(PREFIX + "_" + _Symbol + "_" + IntegerToString(InpMagic) + "_THEME", extTheme);
-         ApplyTheme(); 
-         ResetDashboard(); 
+         ApplyTheme(); ResetDashboard(); 
       }
       else if(sparam == PREFIX + "THM_NEON")  
       { 
          extTheme = THEME_NEON_BLUE; 
          GlobalVariableSet(PREFIX + "_" + _Symbol + "_" + IntegerToString(InpMagic) + "_THEME", extTheme);
-         ApplyTheme(); 
-         ResetDashboard(); 
+         ApplyTheme(); ResetDashboard(); 
       }
       else if(sparam == PREFIX + "THM_MATRIX") 
       { 
          extTheme = THEME_MATRIX;    
          GlobalVariableSet(PREFIX + "_" + _Symbol + "_" + IntegerToString(InpMagic) + "_THEME", extTheme);
-         ApplyTheme(); 
-         ResetDashboard(); 
+         ApplyTheme(); ResetDashboard(); 
       }
       else if(sparam == PREFIX + "THM_DARK")   
       { 
          extTheme = THEME_PURE_DARK;  
          GlobalVariableSet(PREFIX + "_" + _Symbol + "_" + IntegerToString(InpMagic) + "_THEME", extTheme);
-         ApplyTheme(); 
-         ResetDashboard(); 
+         ApplyTheme(); ResetDashboard(); 
       }
-      
-      // Visual Toggles
       else if(sparam == PREFIX + "TOG_CHART") 
       { 
          extShowGTChart = !extShowGTChart; 
@@ -277,11 +268,8 @@ void OnChartEvent(const int id, const long& lparam, const double& dparam, const 
          if(!extShowGTChart) DeleteVisualization(); 
          ResetDashboard(); 
       }
-      
-      // (No object-based logic in GrafikTabranij mode)
    }
 }
-
 
 bool IsNewBar()
 {
@@ -384,18 +372,15 @@ bool CreateLabel(string name, int x, int y, string text, color clr, int size = F
 
 void CreateQuadBarRow(string prefix, int y, string label)
 {
-   int textY = y + 8;
-   int dataStart = 90; // Maximum proximity
+   int midY      = y + ROW_H / 2;
+   int dataStart = 90;
    int colW      = (Panel_Width - dataStart) / 4;
    
-   // Label column
-   CreateLabel(prefix + "_lbl", X_Offset + 20, textY, label, gClrLabel);
-   
-   // 4 Value Columns (Ultra-Compact)
-   CreateLabel(prefix + "_v3", X_Offset + dataStart + colW,     textY, "-", gClrValue, 9, FONT_MAIN, ANCHOR_RIGHT_UPPER);
-   CreateLabel(prefix + "_v2", X_Offset + dataStart + colW*2,   textY, "-", gClrValue, 9, FONT_MAIN, ANCHOR_RIGHT_UPPER);
-   CreateLabel(prefix + "_v1", X_Offset + dataStart + colW*3,   textY, "-", gClrValue, 9, FONT_MAIN, ANCHOR_RIGHT_UPPER);
-   CreateLabel(prefix + "_v0", X_Offset + dataStart + colW*4,   textY, "-", gClrAccent,  9, FONT_MAIN, ANCHOR_RIGHT_UPPER);
+   CreateLabel(prefix + "_lbl", X_Offset + 20, midY, label, gClrLabel, 9, FONT_MAIN, ANCHOR_LEFT);
+   CreateLabel(prefix + "_v3", X_Offset + dataStart + (int)(colW * 0.5), midY, "-", gClrValue,  9, FONT_MAIN, ANCHOR_CENTER);
+   CreateLabel(prefix + "_v2", X_Offset + dataStart + (int)(colW * 1.5), midY, "-", gClrValue,  9, FONT_MAIN, ANCHOR_CENTER);
+   CreateLabel(prefix + "_v1", X_Offset + dataStart + (int)(colW * 2.5), midY, "-", gClrValue,  9, FONT_MAIN, ANCHOR_CENTER);
+   CreateLabel(prefix + "_v0", X_Offset + dataStart + (int)(colW * 3.5), midY, "-", gClrAccent, 9, FONT_MAIN, ANCHOR_CENTER);
 }
 
 void ResetDashboard() { DeleteAllObjects(); CreateDashboard(); }
@@ -405,16 +390,15 @@ bool CreateDashboard()
    int y = Y_Offset;
    int totalH = (currTab == TAB_DASHBOARD) ? 525 : 410;
 
-   CreateRect(PREFIX + "Main", X_Offset, y, Panel_Width, totalH, gClrBg, clrDimGray);
+   CreateRect(PREFIX + "Main", X_Offset, y, Panel_Width, totalH, gClrBg, gClrBorder);
    CreateCornerBrackets(X_Offset - 2, y - 2, Panel_Width + 4, totalH + 4, 15, gClrAccent);
    
-   // Tab Navigation Bar
    int tabW = (Panel_Width - 20) / 5;
    int tabX = X_Offset + 10;
    int tabY = y + 10;
    
-   CreateTabButton(PREFIX + "TAB_DB", tabX + (tabW/2),       tabY, tabW, 25, "DASHBOARD", currTab == TAB_DASHBOARD);
-   CreateTabButton(PREFIX + "TAB_AB", tabX + (tabW + tabW/2), tabY, tabW, 25, "ABOUT",     currTab == TAB_ABOUT);
+   CreateTabButton(PREFIX + "TAB_DB", tabX + (tabW/2),          tabY, tabW, 25, "DASHBOARD", currTab == TAB_DASHBOARD);
+   CreateTabButton(PREFIX + "TAB_AB", tabX + (tabW + tabW/2),   tabY, tabW, 25, "ABOUT",     currTab == TAB_ABOUT);
    CreateTabButton(PREFIX + "TAB_TR", tabX + (tabW*2 + tabW/2), tabY, tabW, 25, "TRADING",   currTab == TAB_TRADING);
    CreateTabButton(PREFIX + "TAB_CL", tabX + (tabW*3 + tabW/2), tabY, tabW, 25, "COLORS",    currTab == TAB_COLORS);
    CreateTabButton(PREFIX + "TAB_VS", tabX + (tabW*4 + tabW/2), tabY, tabW, 25, "VISUAL",    currTab == TAB_VISUAL);
@@ -433,29 +417,37 @@ bool CreateDashboard()
 
 void CreateDashboardTab(int y)
 {
-   // Header Area
    int centerX = X_Offset + (Panel_Width / 2);
    CreateRect(PREFIX + "Hdr", X_Offset + 4, y, Panel_Width - 8, 45, gClrHdr);
-   CreateLabel(PREFIX + "Title", centerX, y + 15, "GT", gClrAccent, 11, FONT_MAIN, ANCHOR_CENTER);
+   CreateLabel(PREFIX + "Title", centerX, y + 22, "Genesis Riwayat Angka Faktual Informasi Keuangan", gClrAccent, 11, FONT_MAIN, ANCHOR_CENTER);
    y += 50;
    
-   // Column Titles
    int dataStart = 90;
    int colW      = (Panel_Width - dataStart) / 4;
-   CreateLabel(PREFIX + "C3", X_Offset + dataStart + colW,     y, "[ GT3 ]", clrAqua, 8, FONT_MAIN, ANCHOR_RIGHT_UPPER);
-   CreateLabel(PREFIX + "C2", X_Offset + dataStart + colW*2,   y, "[ GT2 ]", clrAqua, 8, FONT_MAIN, ANCHOR_RIGHT_UPPER);
-   CreateLabel(PREFIX + "C1", X_Offset + dataStart + colW*3,   y, "[ GT1 ]", clrAqua, 8, FONT_MAIN, ANCHOR_RIGHT_UPPER);
-   CreateLabel(PREFIX + "C0", X_Offset + dataStart + colW*4,   y, "[ GT LIVE ]", gClrAccent, 8, FONT_MAIN, ANCHOR_RIGHT_UPPER);
-   CreateLabel(PREFIX + "CountdownIcon", X_Offset + dataStart + colW*4 - 55, y + 24, "p", COLOR_COUNTDOWN, 9, "Webdings", ANCHOR_RIGHT_UPPER);
-   CreateLabel(PREFIX + "Countdown", X_Offset + dataStart + colW*4, y + 23, "00:00:00", COLOR_COUNTDOWN, 8, FONT_MAIN, ANCHOR_RIGHT_UPPER);
+   CreateLabel(PREFIX + "C3", X_Offset + dataStart + (int)(colW * 0.5), y, "[ GT3 ]",    clrAqua,    8, FONT_MAIN, ANCHOR_UPPER);
+   CreateLabel(PREFIX + "C2", X_Offset + dataStart + (int)(colW * 1.5), y, "[ GT2 ]",    clrAqua,    8, FONT_MAIN, ANCHOR_UPPER);
+   CreateLabel(PREFIX + "C1", X_Offset + dataStart + (int)(colW * 2.5), y, "[ GT1 ]",    clrAqua,    8, FONT_MAIN, ANCHOR_UPPER);
+   CreateLabel(PREFIX + "C0", X_Offset + dataStart + (int)(colW * 3.5), y, "[ GT LIVE ]",gClrAccent, 8, FONT_MAIN, ANCHOR_UPPER);
+   CreateLabel(PREFIX + "CountdownIcon", X_Offset + dataStart + (int)(colW * 3.5) - 32, y + 24, "p", COLOR_COUNTDOWN, 9, "Webdings", ANCHOR_UPPER);
+   CreateLabel(PREFIX + "Countdown",     X_Offset + dataStart + (int)(colW * 3.5) + 8,  y + 23, "00:00:00", COLOR_COUNTDOWN, 8, FONT_MAIN, ANCHOR_UPPER);
    y += 40;
+
+   int y_start = y;
+   int y_end   = y_start + 8 * ROW_H;
+   
+   CreateRect(PREFIX + "Grid_V_Label", X_Offset + dataStart, y_start, 1, y_end - y_start, gClrBorder);
+   for(int i = 1; i <= 4; i++)
+      CreateRect(PREFIX + "Grid_V_" + IntegerToString(i), X_Offset + dataStart + colW * i, y_start, 1, y_end - y_start, gClrBorder);
+   
+   for(int i = 0; i <= 8; i++)
+      CreateRect(PREFIX + "Grid_H_" + IntegerToString(i), X_Offset + 4, y_start + i * ROW_H, Panel_Width - 8, 1, gClrBorder);
 
    CreateQuadBarRow(PREFIX + "R_OH",    y, "Tinggi");    y += ROW_H;
    CreateQuadBarRow(PREFIX + "R_CH",    y, "Atas");      y += ROW_H;
    CreateQuadBarRow(PREFIX + "R_CL",    y, "Bawah");     y += ROW_H;
    CreateQuadBarRow(PREFIX + "R_OL",    y, "Rendah");    y += ROW_H;
    CreateQuadBarRow(PREFIX + "R_Awal",  y, "Awal");      y += ROW_H;
-   CreateQuadBarRow(PREFIX + "R_OC",    y, "Neto");     y += ROW_H;
+   CreateQuadBarRow(PREFIX + "R_OC",    y, "Neto");      y += ROW_H;
    CreateQuadBarRow(PREFIX + "R_LH",    y, "Inti");      y += ROW_H;
    CreateQuadBarRow(PREFIX + "R_Range", y, "Jangkauan"); y += ROW_H + 5;
 
@@ -467,39 +459,34 @@ void UpdateInfoSectionOnDashboard(int y)
    CreateRect(PREFIX + "InfoBg", X_Offset + 4, y, Panel_Width - 8, 135, gClrStripe);
    int infoY = y + 10;
    
-   // Row 1: Balance & Equity
-   CreateLabel(PREFIX + "Acc_Bal", X_Offset + 20, infoY, "Saldo:", gClrLabel, 8);
-   CreateLabel(PREFIX + "Acc_BalVal", X_Offset + 130, infoY, "0.00", gClrValue, 8);
-   CreateLabel(PREFIX + "Acc_Eq", X_Offset + Panel_Width/2, infoY, "Equity:", gClrLabel, 8);
-   CreateLabel(PREFIX + "Acc_EqVal", X_Offset + Panel_Width - 20, infoY, "0.00", gClrValue, 8, FONT_MAIN, ANCHOR_RIGHT_UPPER);
+   CreateLabel(PREFIX + "Acc_Bal",    X_Offset + 20,              infoY, "Saldo:",       gClrLabel, 8);
+   CreateLabel(PREFIX + "Acc_BalVal", X_Offset + 130,             infoY, "0.00",         gClrValue, 8);
+   CreateLabel(PREFIX + "Acc_Eq",     X_Offset + Panel_Width/2,   infoY, "Equity:",      gClrLabel, 8);
+   CreateLabel(PREFIX + "Acc_EqVal",  X_Offset + Panel_Width - 20,infoY, "0.00",         gClrValue, 8, FONT_MAIN, ANCHOR_RIGHT_UPPER);
    
-   // Row 2: Spread & Symbol P/L
    infoY += 22;
-   CreateLabel(PREFIX + "Sym_Spread", X_Offset + 20, infoY, "Spread:", gClrLabel, 8);
-   CreateLabel(PREFIX + "Sym_SpreadVal", X_Offset + 130, infoY, "0", gClrValue, 8);
-   CreateLabel(PREFIX + "Sym_PL", X_Offset + Panel_Width/2, infoY, "Symbol P/L:", gClrLabel, 8);
-   CreateLabel(PREFIX + "Sym_PLVal", X_Offset + Panel_Width - 20, infoY, "0.00", gClrAccent, 8, FONT_MAIN, ANCHOR_RIGHT_UPPER);
+   CreateLabel(PREFIX + "Sym_Spread",    X_Offset + 20,               infoY, "Spread:",      gClrLabel, 8);
+   CreateLabel(PREFIX + "Sym_SpreadVal", X_Offset + 130,              infoY, "0",            gClrValue, 8);
+   CreateLabel(PREFIX + "Sym_PL",        X_Offset + Panel_Width/2,    infoY, "Symbol P/L:",  gClrLabel, 8);
+   CreateLabel(PREFIX + "Sym_PLVal",     X_Offset + Panel_Width - 20, infoY, "0.00",         gClrAccent,8, FONT_MAIN, ANCHOR_RIGHT_UPPER);
 
-   // Row 3: Buy Exposure & Margin Level
    infoY += 22;
-   CreateLabel(PREFIX + "Sym_BuyExp", X_Offset + 20, infoY, "Buy Exp:", gClrLabel, 8);
-   CreateLabel(PREFIX + "Sym_BuyExpVal", X_Offset + 130, infoY, "0.00 Lots", gClrValue, 8);
-   CreateLabel(PREFIX + "Acc_ML", X_Offset + Panel_Width/2, infoY, "Margin Level:", gClrLabel, 8);
-   CreateLabel(PREFIX + "Acc_MLVal", X_Offset + Panel_Width - 20, infoY, "0.00%", gClrValue, 8, FONT_MAIN, ANCHOR_RIGHT_UPPER);
+   CreateLabel(PREFIX + "Sym_BuyExp",    X_Offset + 20,               infoY, "Buy Exp:",     gClrLabel, 8);
+   CreateLabel(PREFIX + "Sym_BuyExpVal", X_Offset + 130,              infoY, "0.00 Lots",    gClrValue, 8);
+   CreateLabel(PREFIX + "Acc_ML",        X_Offset + Panel_Width/2,    infoY, "Margin Level:",gClrLabel, 8);
+   CreateLabel(PREFIX + "Acc_MLVal",     X_Offset + Panel_Width - 20, infoY, "0.00%",        gClrValue, 8, FONT_MAIN, ANCHOR_RIGHT_UPPER);
 
-   // Row 4: Sell Exposure & Eq to SO
    infoY += 22;
-   CreateLabel(PREFIX + "Sym_SellExp", X_Offset + 20, infoY, "Sell Exp:", gClrLabel, 8);
-   CreateLabel(PREFIX + "Sym_SellExpVal", X_Offset + 130, infoY, "0.00 Lots", gClrValue, 8);
-   CreateLabel(PREFIX + "Acc_SOEq", X_Offset + Panel_Width/2, infoY, "Eq to SO:", gClrLabel, 8);
-   CreateLabel(PREFIX + "Acc_SOEqVal", X_Offset + Panel_Width - 20, infoY, "0.00", gClrValue, 8, FONT_MAIN, ANCHOR_RIGHT_UPPER);
+   CreateLabel(PREFIX + "Sym_SellExp",    X_Offset + 20,               infoY, "Sell Exp:",   gClrLabel, 8);
+   CreateLabel(PREFIX + "Sym_SellExpVal", X_Offset + 130,              infoY, "0.00 Lots",   gClrValue, 8);
+   CreateLabel(PREFIX + "Acc_SOEq",       X_Offset + Panel_Width/2,    infoY, "Eq to SO:",   gClrLabel, 8);
+   CreateLabel(PREFIX + "Acc_SOEqVal",    X_Offset + Panel_Width - 20, infoY, "0.00",        gClrValue, 8, FONT_MAIN, ANCHOR_RIGHT_UPPER);
 
-   // Row 5: SO Price & Pts to SO
    infoY += 22;
-   CreateLabel(PREFIX + "Sym_SOPrice", X_Offset + 20, infoY, "SO Price:", gClrLabel, 8);
-   CreateLabel(PREFIX + "Sym_SOPriceVal", X_Offset + 130, infoY, "-", gClrValue, 8);
-   CreateLabel(PREFIX + "Sym_SOPts", X_Offset + Panel_Width/2, infoY, "Pts to SO:", gClrLabel, 8);
-   CreateLabel(PREFIX + "Sym_SOPtsVal", X_Offset + Panel_Width - 20, infoY, "0 pts", gClrValue, 8, FONT_MAIN, ANCHOR_RIGHT_UPPER);
+   CreateLabel(PREFIX + "Sym_SOPrice",    X_Offset + 20,               infoY, "SO Price:",   gClrLabel, 8);
+   CreateLabel(PREFIX + "Sym_SOPriceVal", X_Offset + 130,              infoY, "-",           gClrValue, 8);
+   CreateLabel(PREFIX + "Sym_SOPts",      X_Offset + Panel_Width/2,    infoY, "Pts to SO:",  gClrLabel, 8);
+   CreateLabel(PREFIX + "Sym_SOPtsVal",   X_Offset + Panel_Width - 20, infoY, "0 pts",       gClrValue, 8, FONT_MAIN, ANCHOR_RIGHT_UPPER);
 }
 
 void CreateAboutTab(int y)
@@ -509,52 +496,52 @@ void CreateAboutTab(int y)
    CreateRect(PREFIX + "AboutBg", X_Offset + 4, y, Panel_Width - 8, 340, gClrStripe);
    
    int lineY = y + 20;
-   CreateLabel(PREFIX + "Ab_Title", contentX, lineY, "UNTUK MENJADI BAHAGIA DALAM TRADING", gClrAccent, 11);
+   CreateLabel(PREFIX + "Ab_Title",   contentX, lineY, "UNTUK MENJADI BAHAGIA DALAM TRADING", gClrAccent, 11);
    lineY += 30;
-   CreateLabel(PREFIX + "Ab_Desc1", contentX, lineY, "Anda harus menghilangkan dua hal:", clrWhite, 9);
+   CreateLabel(PREFIX + "Ab_Desc1",   contentX, lineY, "Anda harus menghilangkan dua hal:", clrWhite, 9);
    lineY += 20;
-   CreateLabel(PREFIX + "Ab_Desc2", contentX, lineY, "Ketakutan akan masa depan yang buruk dan kenangan akan masa lalu yang buruk", clrWhite, 9);
+   CreateLabel(PREFIX + "Ab_Desc2",   contentX, lineY, "Ketakutan akan masa depan yang buruk dan kenangan akan masa lalu yang buruk", clrWhite, 9);
    
    lineY += 40;
-   CreateLabel(PREFIX + "Ab_DevLabel", contentX, lineY, "Developed by:", gClrLabel, 8);
-   CreateLabel(PREFIX + "Ab_DevVal", contentX + 120, lineY, "MOCHAMAD TABRANI", gClrValue, 8);
+   CreateLabel(PREFIX + "Ab_DevLabel",  contentX,       lineY, "Developed by:", gClrLabel, 8);
+   CreateLabel(PREFIX + "Ab_DevVal",    contentX + 120, lineY, "MOCHAMAD TABRANI", gClrValue, 8);
    lineY += 20;
-   CreateLabel(PREFIX + "Ab_VerLabel", contentX, lineY, "Version:", gClrLabel, 8);
-   CreateLabel(PREFIX + "Ab_VerVal", contentX + 120, lineY, "0.01 Professional", gClrValue, 8);
+   CreateLabel(PREFIX + "Ab_VerLabel",  contentX,       lineY, "Version:",      gClrLabel, 8);
+   CreateLabel(PREFIX + "Ab_VerVal",    contentX + 120, lineY, "0.01 Professional", gClrValue, 8);
    lineY += 20;
-   CreateLabel(PREFIX + "Ab_Method", contentX, lineY, "Methodology:", gClrLabel, 8);
+   CreateLabel(PREFIX + "Ab_Method",    contentX,       lineY, "Methodology:",  gClrLabel, 8);
    CreateLabel(PREFIX + "Ab_MethodVal", contentX + 120, lineY, "Grafik Tabranij (GT) Matematika Pasar", gClrValue, 8);
    
    lineY += 50;
-   CreateRect(PREFIX + "Ab_Box", contentX, lineY, contentW, 100, gClrBg, clrSilver);
-   CreateLabel(PREFIX + "Ab_Status", contentX + 10, lineY + 10, "STATUS SISTEM: OPERASIONAL", gClrSuccess, 9);
-   CreateLabel(PREFIX + "Ab_Lince", contentX + 10, lineY + 30, "License: RINGIN BAMBU Juli 2026", clrSilver, 8);
-   CreateLabel(PREFIX + "Ab_Support", contentX + 10, lineY + 70, "Support: mql5.com/getbos | t.me/ringinbambu", gClrAccent, 8);
+   CreateRect(PREFIX + "Ab_Box",    contentX, lineY, contentW, 100, gClrBg, clrSilver);
+   CreateLabel(PREFIX + "Ab_Status",  contentX + 10, lineY + 10, "STATUS SISTEM: OPERASIONAL",                     gClrSuccess, 9);
+   CreateLabel(PREFIX + "Ab_Lince",   contentX + 10, lineY + 30, "License: RINGIN BAMBU Juli 2026",                clrSilver,   8);
+   CreateLabel(PREFIX + "Ab_Support", contentX + 10, lineY + 70, "Support: mql5.com/getbos | t.me/ringinbambu",   gClrAccent,  8);
 }
 
 void CreateTradingTab(int y)
 {
    CreateRect(PREFIX + "TradBg", X_Offset + 4, y, Panel_Width - 8, 340, gClrStripe);
-   int lineY = y + 20;
+   int lineY    = y + 20;
    int contentX = X_Offset + 20;
    
    CreateLabel(PREFIX + "Tr_Title", contentX, lineY, "RINGKASAN PENGATURAN ALGORITMA", gClrAccent, 10);
    lineY += 40;
    
-   CreateLabel(PREFIX + "Tr_StratL", contentX, lineY, "Durasi GT:", gClrLabel, 9);
+   CreateLabel(PREFIX + "Tr_StratL", contentX,       lineY, "Durasi GT:",    gClrLabel, 9);
    CreateLabel(PREFIX + "Tr_StratV", contentX + 150, lineY, EnumToString(InpGTTimeframe), gClrValue, 9);
    lineY += 25;
-   CreateLabel(PREFIX + "Tr_LotL", contentX, lineY, "Volume:", gClrLabel, 9);
-   CreateLabel(PREFIX + "Tr_LotV", contentX + 150, lineY, DoubleToString(InpLot, 2), gClrValue, 9);
+   CreateLabel(PREFIX + "Tr_LotL",   contentX,       lineY, "Volume:",       gClrLabel, 9);
+   CreateLabel(PREFIX + "Tr_LotV",   contentX + 150, lineY, DoubleToString(InpLot, 2), gClrValue, 9);
    lineY += 25;
-   CreateLabel(PREFIX + "Tr_StepL", contentX, lineY, "Martingale x:", gClrLabel, 9);
-   CreateLabel(PREFIX + "Tr_StepV", contentX + 150, lineY, DoubleToString(InpMultiplier, 1) + "x / Max " + IntegerToString(InpMaxSteps), gClrValue, 9);
+   CreateLabel(PREFIX + "Tr_StepL",  contentX,       lineY, "Martingale x:", gClrLabel, 9);
+   CreateLabel(PREFIX + "Tr_StepV",  contentX + 150, lineY, DoubleToString(InpMultiplier,1) + "x / Max " + IntegerToString(InpMaxSteps), gClrValue, 9);
    lineY += 25;
-   CreateLabel(PREFIX + "Tr_TPL", contentX, lineY, "TP / SL:", gClrLabel, 9);
-   CreateLabel(PREFIX + "Tr_TPV", contentX + 150, lineY, IntegerToString(InpTP) + " / " + IntegerToString(InpSL) + " pts", gClrValue, 9);
+   CreateLabel(PREFIX + "Tr_TPL",    contentX,       lineY, "TP / SL:",      gClrLabel, 9);
+   CreateLabel(PREFIX + "Tr_TPV",    contentX + 150, lineY, IntegerToString(InpTP) + " / " + IntegerToString(InpSL) + " pts", gClrValue, 9);
    
    lineY += 50;
-   CreateLabel(PREFIX + "Tr_Note", contentX, lineY, "Catatan: Untuk mengubah nilai ini, silakan gunakan standar", clrSilver, 8);
+   CreateLabel(PREFIX + "Tr_Note",  contentX, lineY,      "Catatan: Untuk mengubah nilai ini, silakan gunakan standar", clrSilver, 8);
    lineY += 15;
    CreateLabel(PREFIX + "Tr_Note2", contentX, lineY, "Expert Advisor Properties (F7 -> Inputs).", clrSilver, 8);
 }
@@ -562,16 +549,16 @@ void CreateTradingTab(int y)
 void CreateColorsTab(int y)
 {
    CreateRect(PREFIX + "ColBg", X_Offset + 4, y, Panel_Width - 8, 340, gClrStripe);
-   int lineY = y + 20;
+   int lineY   = y + 20;
    int centerX = X_Offset + Panel_Width/2;
    
    CreateLabel(PREFIX + "Cl_Title", centerX, lineY, "PILIH TAMPILAN TEMA", gClrAccent, 11, FONT_MAIN, ANCHOR_CENTER);
    lineY += 50;
    
    int btnW = 180, btnH = 35;
-   CreateButton(PREFIX + "THM_ONYX", centerX, lineY, btnW, btnH, "ONYX & GOLD", clrWhite, C'35,35,35');
+   CreateButton(PREFIX + "THM_ONYX",   centerX, lineY, btnW, btnH, "ONYX & GOLD",  clrWhite, C'35,35,35');
    lineY += 50;
-   CreateButton(PREFIX + "THM_NEON", centerX, lineY, btnW, btnH, "NEON BLUE", clrWhite, C'20,40,60');
+   CreateButton(PREFIX + "THM_NEON",   centerX, lineY, btnW, btnH, "NEON BLUE",    clrWhite, C'20,40,60');
    lineY += 50;
    CreateButton(PREFIX + "THM_MATRIX", centerX, lineY, btnW, btnH, "RETRO MATRIX", clrWhite, C'10,50,10');
    
@@ -582,19 +569,19 @@ void CreateColorsTab(int y)
 void CreateVisualTab(int y)
 {
    CreateRect(PREFIX + "VisBg", X_Offset + 4, y, Panel_Width - 8, 340, gClrStripe);
-   int lineY = y + 20;
+   int lineY   = y + 20;
    int centerX = X_Offset + Panel_Width/2;
    
    CreateLabel(PREFIX + "Vs_Title", centerX, lineY, "PENGATURAN TAMPILAN GT", gClrAccent, 11, FONT_MAIN, ANCHOR_CENTER);
    lineY += 60;
    
    string toggleText = extShowGTChart ? "MENONAKTIFKAN LEVEL GT" : "MENGAKTIFKAN LEVEL GT";
-   color toggleBg = extShowGTChart ? gClrDanger : gClrSuccess;
+   color  toggleBg   = extShowGTChart ? gClrDanger : gClrSuccess;
    
    CreateButton(PREFIX + "TOG_CHART", centerX, lineY, 220, 40, toggleText, clrWhite, toggleBg);
    
    lineY += 80;
-   CreateLabel(PREFIX + "Vs_Desc", centerX, lineY, "Mengaktifkan/menonaktifkan tampilan garis GT secara langsung", clrWhite, 9, FONT_MAIN, ANCHOR_CENTER);
+   CreateLabel(PREFIX + "Vs_Desc",  centerX, lineY,      "Mengaktifkan/menonaktifkan tampilan garis GT secara langsung", clrWhite, 9, FONT_MAIN, ANCHOR_CENTER);
    lineY += 20;
    CreateLabel(PREFIX + "Vs_Desc2", centerX, lineY, "(Tinggi, Rendah, Awal, Inti) di grafik tabranij.", clrWhite, 9, FONT_MAIN, ANCHOR_CENTER);
 }
@@ -602,44 +589,43 @@ void CreateVisualTab(int y)
 bool CreateTabButton(string name, int x, int y, int w, int h, string text, bool active)
 {
    if(!ObjectCreate(0, name, OBJ_BUTTON, 0, 0, 0)) return false;
-   ObjectSetInteger(0, name, OBJPROP_CORNER, CORNER_LEFT_UPPER);
-   ObjectSetInteger(0, name, OBJPROP_XDISTANCE, x - (w/2));
-   ObjectSetInteger(0, name, OBJPROP_YDISTANCE, y);
-   ObjectSetInteger(0, name, OBJPROP_XSIZE, w - 4);
-   ObjectSetInteger(0, name, OBJPROP_YSIZE, h);
-   ObjectSetString(0, name, OBJPROP_TEXT, text);
-   ObjectSetInteger(0, name, OBJPROP_FONTSIZE, 8);
-   ObjectSetInteger(0, name, OBJPROP_COLOR, active ? clrWhite : clrSilver);
-   ObjectSetInteger(0, name, OBJPROP_BGCOLOR, active ? gClrAccent : gClrHdr);
-   ObjectSetInteger(0, name, OBJPROP_BORDER_COLOR, active ? clrWhite : clrDimGray);
-   ObjectSetInteger(0, name, OBJPROP_SELECTABLE, false);
+   ObjectSetInteger(0, name, OBJPROP_CORNER,       CORNER_LEFT_UPPER);
+   ObjectSetInteger(0, name, OBJPROP_XDISTANCE,    x - (w/2));
+   ObjectSetInteger(0, name, OBJPROP_YDISTANCE,    y);
+   ObjectSetInteger(0, name, OBJPROP_XSIZE,        w - 4);
+   ObjectSetInteger(0, name, OBJPROP_YSIZE,        h);
+   ObjectSetString (0, name, OBJPROP_TEXT,         text);
+   ObjectSetInteger(0, name, OBJPROP_FONTSIZE,     8);
+   ObjectSetInteger(0, name, OBJPROP_COLOR,        active ? clrWhite  : clrSilver);
+   ObjectSetInteger(0, name, OBJPROP_BGCOLOR,      active ? gClrAccent: gClrHdr);
+   ObjectSetInteger(0, name, OBJPROP_BORDER_COLOR, active ? clrWhite  : clrDimGray);
+   ObjectSetInteger(0, name, OBJPROP_SELECTABLE,   false);
    return true;
 }
-
 
 bool CreateButton(string name, int x, int y, int w, int h, string text, color txtClr, color bgClr)
 {
    if(!ObjectCreate(0, name, OBJ_BUTTON, 0, 0, 0)) return false;
-   ObjectSetInteger(0, name, OBJPROP_CORNER, CORNER_LEFT_UPPER);
-   ObjectSetInteger(0, name, OBJPROP_XDISTANCE, x - (w/2));
-   ObjectSetInteger(0, name, OBJPROP_YDISTANCE, y - (h/2));
-   ObjectSetInteger(0, name, OBJPROP_XSIZE, w);
-   ObjectSetInteger(0, name, OBJPROP_YSIZE, h);
-   ObjectSetString(0, name, OBJPROP_TEXT, text);
-   ObjectSetInteger(0, name, OBJPROP_COLOR, txtClr);
-   ObjectSetInteger(0, name, OBJPROP_BGCOLOR, bgClr);
+   ObjectSetInteger(0, name, OBJPROP_CORNER,       CORNER_LEFT_UPPER);
+   ObjectSetInteger(0, name, OBJPROP_XDISTANCE,    x - (w/2));
+   ObjectSetInteger(0, name, OBJPROP_YDISTANCE,    y - (h/2));
+   ObjectSetInteger(0, name, OBJPROP_XSIZE,        w);
+   ObjectSetInteger(0, name, OBJPROP_YSIZE,        h);
+   ObjectSetString (0, name, OBJPROP_TEXT,         text);
+   ObjectSetInteger(0, name, OBJPROP_COLOR,        txtClr);
+   ObjectSetInteger(0, name, OBJPROP_BGCOLOR,      bgClr);
    ObjectSetInteger(0, name, OBJPROP_BORDER_COLOR, clrSilver);
-   ObjectSetInteger(0, name, OBJPROP_FONTSIZE, 8);
-   ObjectSetInteger(0, name, OBJPROP_SELECTABLE, false);
+   ObjectSetInteger(0, name, OBJPROP_FONTSIZE,     8);
+   ObjectSetInteger(0, name, OBJPROP_SELECTABLE,   false);
    return true;
 }
 
 void CreateCornerBrackets(int x, int y, int w, int h, int size, color clr)
 {
-   CreateRect(PREFIX+"TL1", x, y, size, 2, clr); CreateRect(PREFIX+"TL2", x, y, 2, size, clr);
-   CreateRect(PREFIX+"TR1", x + w - size, y, size, 2, clr); CreateRect(PREFIX+"TR2", x + w - 2, y, 2, size, clr);
-   CreateRect(PREFIX+"BL1", x, y + h - 2, size, 2, clr); CreateRect(PREFIX+"BL2", x, y + h - size, 2, size, clr);
-   CreateRect(PREFIX+"BR1", x + w - size, y + h - 2, size, 2, clr); CreateRect(PREFIX+"BR2", x + w - 2, y + h - size, 2, size, clr);
+   CreateRect(PREFIX+"TL1", x,          y,          size, 2,    clr); CreateRect(PREFIX+"TL2", x,          y,          2, size, clr);
+   CreateRect(PREFIX+"TR1", x+w-size,   y,          size, 2,    clr); CreateRect(PREFIX+"TR2", x+w-2,      y,          2, size, clr);
+   CreateRect(PREFIX+"BL1", x,          y+h-2,      size, 2,    clr); CreateRect(PREFIX+"BL2", x,          y+h-size,   2, size, clr);
+   CreateRect(PREFIX+"BR1", x+w-size,   y+h-2,      size, 2,    clr); CreateRect(PREFIX+"BR2", x+w-2,      y+h-size,   2, size, clr);
 }
 
 //+------------------------------------------------------------------+
@@ -662,11 +648,11 @@ void UpdateInfoSection()
    double equity  = AccountInfoDouble(ACCOUNT_EQUITY);
    int    spread  = (int)SymbolInfoInteger(_Symbol, SYMBOL_SPREAD);
    
-   double symbolPL = 0;
-   double buyLots = 0;
-   double sellLots = 0;
+   double symbolPL    = 0;
+   double buyLots     = 0;
+   double sellLots    = 0;
    double buyPriceSum = 0;
-   double sellPriceSum = 0;
+   double sellPriceSum= 0;
    
    for(int i = PositionsTotal() - 1; i >= 0; i--)
    {
@@ -675,58 +661,43 @@ void UpdateInfoSection()
       {
          if(PositionGetString(POSITION_SYMBOL) == _Symbol)
          {
-            double lots = PositionGetDouble(POSITION_VOLUME);
+            double lots  = PositionGetDouble(POSITION_VOLUME);
             double price = PositionGetDouble(POSITION_PRICE_OPEN);
             ENUM_POSITION_TYPE posType = (ENUM_POSITION_TYPE)PositionGetInteger(POSITION_TYPE);
             
-            if(posType == POSITION_TYPE_BUY)
-            {
-               buyLots += lots;
-               buyPriceSum += price * lots;
-            }
-            else if(posType == POSITION_TYPE_SELL)
-            {
-               sellLots += lots;
-               sellPriceSum += price * lots;
-            }
-               
-            symbolPL += PositionGetDouble(POSITION_PROFIT) + PositionGetDouble(POSITION_SWAP) + PositionGetDouble(POSITION_COMMISSION);
+            if(posType == POSITION_TYPE_BUY)  { buyLots  += lots; buyPriceSum  += price * lots; }
+            else if(posType == POSITION_TYPE_SELL) { sellLots += lots; sellPriceSum += price * lots; }
+            symbolPL += PositionGetDouble(POSITION_PROFIT) + PositionGetDouble(POSITION_SWAP);
          }
       }
    }
    
-   double avgBuyPrice = (buyLots > 0) ? buyPriceSum / buyLots : 0;
+   double avgBuyPrice  = (buyLots  > 0) ? buyPriceSum  / buyLots  : 0;
    double avgSellPrice = (sellLots > 0) ? sellPriceSum / sellLots : 0;
    
-   SetVal(PREFIX + "Acc_BalVal", DoubleToString(balance, 2), gClrValue);
-   SetVal(PREFIX + "Acc_EqVal", DoubleToString(equity, 2), gClrValue);
-   SetVal(PREFIX + "Sym_SpreadVal", IntegerToString(spread), gClrValue);
+   SetVal(PREFIX + "Acc_BalVal",    DoubleToString(balance, 2), gClrValue);
+   SetVal(PREFIX + "Acc_EqVal",     DoubleToString(equity, 2),  gClrValue);
+   SetVal(PREFIX + "Sym_SpreadVal", IntegerToString(spread),    gClrValue);
 
-   // Calculate point value total early
-   double netLots = buyLots - sellLots;
-   double tickSize = SymbolInfoDouble(_Symbol, SYMBOL_TRADE_TICK_SIZE);
-   double tickValue = SymbolInfoDouble(_Symbol, SYMBOL_TRADE_TICK_VALUE);
-   double pointValuePerLot = (tickSize > 0) ? tickValue * (myPoint / tickSize) : myPoint;
+   double netLots         = buyLots - sellLots;
+   double tickSize        = SymbolInfoDouble(_Symbol, SYMBOL_TRADE_TICK_SIZE);
+   double tickValue       = SymbolInfoDouble(_Symbol, SYMBOL_TRADE_TICK_VALUE);
+   double pointValuePerLot= (tickSize > 0) ? tickValue * (myPoint / tickSize) : myPoint;
    double pointValueTotal = MathAbs(netLots) * pointValuePerLot;
 
    double ptsFloating = 0;
    if(pointValueTotal > 0)
       ptsFloating = symbolPL / pointValueTotal;
 
-   // Format Symbol P/L dynamically with signs, unicode indicators, and neutral state color
-   string plStr = "";
-   color plColor = gClrValue;
+   string plStr  = "";
+   color  plColor= gClrValue;
    
    if(symbolPL > 0.005)
    {
       plColor = gClrSuccess;
       if(buyLots > 0 || sellLots > 0)
-      {
-         if(pointValueTotal > 0)
-            plStr = StringFormat("▲ +%.2f (+%d pts)", symbolPL, (int)MathRound(ptsFloating));
-         else
-            plStr = StringFormat("▲ +%.2f (Hedged)", symbolPL);
-      }
+         plStr = (pointValueTotal > 0) ? StringFormat("▲ +%.2f (+%d pts)", symbolPL, (int)MathRound(ptsFloating))
+                                       : StringFormat("▲ +%.2f (Hedged)", symbolPL);
       else
          plStr = StringFormat("▲ +%.2f (0 pts)", symbolPL);
    }
@@ -734,44 +705,37 @@ void UpdateInfoSection()
    {
       plColor = gClrDanger;
       if(buyLots > 0 || sellLots > 0)
-      {
-         if(pointValueTotal > 0)
-            plStr = StringFormat("▼ %.2f (%d pts)", symbolPL, (int)MathRound(ptsFloating));
-         else
-            plStr = StringFormat("▼ %.2f (Hedged)", symbolPL);
-      }
+         plStr = (pointValueTotal > 0) ? StringFormat("▼ %.2f (%d pts)", symbolPL, (int)MathRound(ptsFloating))
+                                       : StringFormat("▼ %.2f (Hedged)", symbolPL);
       else
          plStr = StringFormat("▼ %.2f (0 pts)", symbolPL);
    }
    else
    {
       plColor = gClrValue;
-      plStr = "0.00 (0 pts)";
+      plStr   = "0.00 (0 pts)";
    }
    SetVal(PREFIX + "Sym_PLVal", plStr, plColor);
 
-   // Risk Analysis Calculations
-   double margin = AccountInfoDouble(ACCOUNT_MARGIN);
+   double margin      = AccountInfoDouble(ACCOUNT_MARGIN);
    double marginLevel = AccountInfoDouble(ACCOUNT_MARGIN_LEVEL);
-   double stopOutLevel = AccountInfoDouble(ACCOUNT_MARGIN_SO_SO);
-   long stopOutMode = AccountInfoInteger(ACCOUNT_MARGIN_SO_MODE);
+   double stopOutLevel= AccountInfoDouble(ACCOUNT_MARGIN_SO_SO);
+   long   stopOutMode = AccountInfoInteger(ACCOUNT_MARGIN_SO_MODE);
 
-   string buyExpStr = "0.00 Lots";
-   string sellExpStr = "0.00 Lots";
-   string ptsToSOStr = "-";
-   string eqToSOStr = "-";
-   string marginLevelStr = "0.00%";
+   string buyExpStr       = "0.00 Lots";
+   string sellExpStr      = "0.00 Lots";
+   string ptsToSOStr      = "-";
+   string eqToSOStr       = "-";
+   string marginLevelStr  = "0.00%";
    string stopOutPriceStr = "-";
-   color riskColor = gClrValue;
+   color  riskColor       = gClrValue;
 
-   int dispDigits = (myDigits > 4) ? 4 : myDigits;
-   string buyPriceStr = DoubleToString(avgBuyPrice, dispDigits);
-   string sellPriceStr = DoubleToString(avgSellPrice, dispDigits);
+   int    dispDigits    = (myDigits > 4) ? 4 : myDigits;
+   string buyPriceStr   = DoubleToString(avgBuyPrice, dispDigits);
+   string sellPriceStr  = DoubleToString(avgSellPrice, dispDigits);
 
-   if(buyLots > 0)
-      buyExpStr = StringFormat("%.2f @ %s ▲", buyLots, buyPriceStr);
-   if(sellLots > 0)
-      sellExpStr = StringFormat("%.2f @ %s ▼", sellLots, sellPriceStr);
+   if(buyLots  > 0) buyExpStr  = StringFormat("%.2f @ %s ▲", buyLots,  buyPriceStr);
+   if(sellLots > 0) sellExpStr = StringFormat("%.2f @ %s ▼", sellLots, sellPriceStr);
 
    if(buyLots > 0 || sellLots > 0)
    {
@@ -779,77 +743,65 @@ void UpdateInfoSection()
       {
          marginLevelStr = StringFormat("%.1f%% (SO: %.1f%%)", marginLevel, stopOutLevel);
          
-         if(marginLevel < 150.0)
-            riskColor = gClrDanger;
-         else if(marginLevel < 300.0)
-            riskColor = clrOrange;
+         if(marginLevel < 150.0)       riskColor = gClrDanger;
+         else if(marginLevel < 300.0)  riskColor = clrOrange;
 
-         double equitySO = 0;
-         if(stopOutMode == ACCOUNT_STOPOUT_MODE_PERCENT)
-            equitySO = (stopOutLevel * margin) / 100.0;
-         else
-            equitySO = stopOutLevel;
-
-         double equityToSO = equity - equitySO;
+         double equitySO  = (stopOutMode == ACCOUNT_STOPOUT_MODE_PERCENT) ? (stopOutLevel * margin) / 100.0 : stopOutLevel;
+         double equityToSO= equity - equitySO;
          eqToSOStr = DoubleToString(equityToSO, 2);
 
          if(pointValueTotal > 0)
          {
-            double ptsToSO = equityToSO / pointValueTotal;
-            ptsToSOStr = StringFormat("%d pts", (int)MathMax(0, MathRound(ptsToSO)));
-            
-            double stopOutPrice = 0;
-            if(netLots > 0)
-               stopOutPrice = SymbolInfoDouble(_Symbol, SYMBOL_BID) - ptsToSO * myPoint;
-            else // netLots < 0
-               stopOutPrice = SymbolInfoDouble(_Symbol, SYMBOL_ASK) + ptsToSO * myPoint;
-               
-            stopOutPriceStr = DoubleToString(stopOutPrice, dispDigits);
+            double ptsToSO    = equityToSO / pointValueTotal;
+            ptsToSOStr        = StringFormat("%d pts", (int)MathMax(0, MathRound(ptsToSO)));
+            double soPrice    = (netLots > 0) ? SymbolInfoDouble(_Symbol, SYMBOL_BID) - ptsToSO * myPoint
+                                              : SymbolInfoDouble(_Symbol, SYMBOL_ASK) + ptsToSO * myPoint;
+            stopOutPriceStr   = DoubleToString(soPrice, dispDigits);
          }
          else
          {
-            ptsToSOStr = "Hedged";
+            ptsToSOStr      = "Hedged";
             stopOutPriceStr = "Hedged";
          }
       }
    }
 
-   SetVal(PREFIX + "Sym_BuyExpVal", buyExpStr, buyLots > 0 ? gClrSuccess : gClrValue);
-   SetVal(PREFIX + "Sym_SellExpVal", sellExpStr, sellLots > 0 ? gClrDanger : gClrValue);
-   SetVal(PREFIX + "Acc_MLVal", marginLevelStr, riskColor);
-   SetVal(PREFIX + "Acc_SOEqVal", eqToSOStr, riskColor);
+   SetVal(PREFIX + "Sym_BuyExpVal",  buyExpStr,       buyLots  > 0 ? gClrSuccess : gClrValue);
+   SetVal(PREFIX + "Sym_SellExpVal", sellExpStr,      sellLots > 0 ? gClrDanger  : gClrValue);
+   SetVal(PREFIX + "Acc_MLVal",      marginLevelStr,  riskColor);
+   SetVal(PREFIX + "Acc_SOEqVal",    eqToSOStr,       riskColor);
    SetVal(PREFIX + "Sym_SOPriceVal", stopOutPriceStr, riskColor);
-   SetVal(PREFIX + "Sym_SOPtsVal", ptsToSOStr, riskColor);
+   SetVal(PREFIX + "Sym_SOPtsVal",   ptsToSOStr,      riskColor);
 }
 
 void UpdateBarData(int shift, string suffix, color baseClr)
 {
-   double open  = iOpen(_Symbol, PERIOD_CURRENT, shift);
+   double open  = iOpen (_Symbol, PERIOD_CURRENT, shift);
    double close = iClose(_Symbol, PERIOD_CURRENT, shift);
-   double high  = iHigh(_Symbol, PERIOD_CURRENT, shift);
-   double low   = iLow(_Symbol, PERIOD_CURRENT, shift);
+   double high  = iHigh (_Symbol, PERIOD_CURRENT, shift);
+   double low   = iLow  (_Symbol, PERIOD_CURRENT, shift);
    
    if(open == 0) return;
 
-   int oc = (int)((close - open) / myPoint);
-   int lh = (int)((high - low) / myPoint);
+   int    oc = (int)((close - open) / myPoint);
+   int    lh = (int)((high  - low)  / myPoint);
    double bH = MathMax(open, close), bL = MathMin(open, close);
-   int ch = (int)((high - bH) / myPoint), cl = (int)((bL - low) / myPoint);
+   int    ch = (int)((high - bH) / myPoint), cl = (int)((bL - low) / myPoint);
 
-   SetVal(PREFIX + "R_OH" + suffix, DoubleToString(high, myDigits), baseClr);
-   SetVal(PREFIX + "R_CH" + suffix, StringFormat("%d", ch), baseClr);
-   SetVal(PREFIX + "R_CL" + suffix, StringFormat("%d", cl), baseClr);
-   SetVal(PREFIX + "R_OL" + suffix, DoubleToString(low, myDigits), baseClr);
-   SetVal(PREFIX + "R_Awal" + suffix, DoubleToString(open, myDigits), baseClr);
+   SetVal(PREFIX + "R_OH"    + suffix, DoubleToString(high,  myDigits), baseClr);
+   SetVal(PREFIX + "R_CH"    + suffix, StringFormat("%d", ch),          baseClr);
+   SetVal(PREFIX + "R_CL"    + suffix, StringFormat("%d", cl),          baseClr);
+   SetVal(PREFIX + "R_OL"    + suffix, DoubleToString(low,   myDigits), baseClr);
+   SetVal(PREFIX + "R_Awal"  + suffix, DoubleToString(open,  myDigits), baseClr);
    string ocStr = oc >= 0 ? StringFormat("%d ▲", oc) : StringFormat("%d ▼", -oc);
-   SetVal(PREFIX + "R_OC" + suffix, ocStr, oc >= 0 ? gClrSuccess : gClrDanger);
-   SetVal(PREFIX + "R_LH" + suffix, DoubleToString(close, myDigits), baseClr);
-   SetVal(PREFIX + "R_Range" + suffix, StringFormat("%d", lh), baseClr);
+   SetVal(PREFIX + "R_OC"    + suffix, ocStr, oc >= 0 ? gClrSuccess : gClrDanger);
+   SetVal(PREFIX + "R_LH"    + suffix, DoubleToString(close, myDigits), baseClr);
+   SetVal(PREFIX + "R_Range" + suffix, StringFormat("%d", lh),          baseClr);
 }
 
 void SetVal(string name, string txt, color clr)
 {
-   ObjectSetString(0, name, OBJPROP_TEXT, txt);
+   ObjectSetString (0, name, OBJPROP_TEXT,  txt);
    ObjectSetInteger(0, name, OBJPROP_COLOR, clr);
 }
 
@@ -858,15 +810,12 @@ void SetVal(string name, string txt, color clr)
 //+------------------------------------------------------------------+
 void UpdateCountdown()
 {
-   ENUM_TIMEFRAMES tf = Period();
-   int periodSeconds = PeriodSeconds(tf);
-   
-   // Gunakan waktu lokal + offset untuk mendapatkan "Server Time" yang presisi per detik
-   datetime serverTimeLive = (datetime)((long)TimeLocal() + serverLocalOffset);
-   
-   datetime barOpenTime = iTime(_Symbol, tf, 0);
-   int elapsed   = (int)(serverTimeLive - barOpenTime);
-   int remaining = periodSeconds - elapsed;
+   ENUM_TIMEFRAMES tf            = Period();
+   int             periodSeconds = PeriodSeconds(tf);
+   datetime        serverTimeLive= (datetime)((long)TimeLocal() + serverLocalOffset);
+   datetime        barOpenTime   = iTime(_Symbol, tf, 0);
+   int             elapsed       = (int)(serverTimeLive - barOpenTime);
+   int             remaining     = periodSeconds - elapsed;
    
    if(remaining < 0) remaining = 0;
    
@@ -874,27 +823,22 @@ void UpdateCountdown()
    int minutes = (remaining % 3600) / 60;
    int seconds = remaining % 60;
    
-   string countdownText;
-   if(hours > 0)
-      countdownText = StringFormat("%02d:%02d:%02d", hours, minutes, seconds);
-   else
-      countdownText = StringFormat("%02d:%02d", minutes, seconds);
+   string countdownText = (hours > 0) ? StringFormat("%02d:%02d:%02d", hours, minutes, seconds)
+                                      : StringFormat("%02d:%02d", minutes, seconds);
    
-   // Efek pulse: warna berkedip saat mendekati penutupan (< 60 detik)
    color cdColor;
    if(remaining <= 10)
-      cdColor = clrRed;               // Merah solid - detik-detik terakhir
+      cdColor = clrRed;
    else if(remaining <= 60)
    {
-      // Berwarna-warni (Rainbow Pulse) - Expanded with Red, Blue, Green
       color rainbow[] = {clrCyan, clrMagenta, clrYellow, clrLime, clrOrange, clrWhite, clrRed, clrBlue, clrGreen, clrAqua};
       cdColor = rainbow[seconds % ArraySize(rainbow)];
    }
    else
-      cdColor = COLOR_COUNTDOWN;       // Amber Gold normal
+      cdColor = COLOR_COUNTDOWN;
    
-   SetVal(PREFIX + "CountdownIcon", "p", cdColor);
-   SetVal(PREFIX + "Countdown", countdownText, cdColor);
+   SetVal(PREFIX + "CountdownIcon", "p",             cdColor);
+   SetVal(PREFIX + "Countdown",     countdownText,   cdColor);
    ChartRedraw();
 }
 
@@ -903,86 +847,82 @@ void UpdateCountdown()
 //+------------------------------------------------------------------+
 
 //--- State Variables untuk sistem baru
-int      g_martingaleStep = 0;                    // Langkah Martingale saat ini
-ENUM_POSITION_TYPE g_lastDirection   = -1;        // Arah posisi terakhir
-bool     g_waitingForBreakout = true;             // Flag untuk menunggu sinyal breakout
+int                g_martingaleStep    = 0;                         // Langkah Martingale saat ini
+ENUM_POSITION_TYPE g_lastDirection     = (ENUM_POSITION_TYPE)-1;   // Arah posisi terakhir
+bool               g_waitingForBreakout= true;                      // Flag untuk menunggu sinyal breakout
+
+//--- Helper: Count active EA positions on this symbol
+int CountMyPositions()
+{
+   int count = 0;
+   for(int i = PositionsTotal() - 1; i >= 0; i--)
+   {
+      ulong ticket = PositionGetTicket(i);
+      if(PositionSelectByTicket(ticket))
+         if(PositionGetString(POSITION_SYMBOL) == _Symbol && 
+            PositionGetInteger(POSITION_MAGIC) == (long)InpMagic)
+            count++;
+   }
+   return count;
+}
 
 //--- Hitung Range dalam points
 int GetGT_RangePoints()
 {
    double high = iHigh(_Symbol, InpGTTimeframe, 1);
-   double low  = iLow(_Symbol, InpGTTimeframe, 1);
-   
+   double low  = iLow (_Symbol, InpGTTimeframe, 1);
    if(high == 0 || low == 0) return 0;
-   
    return (int)((high - low) / myPoint);
 }
 
-//--- Cek Breakout dari bar M5 sebelumnya
+//--- Cek Breakout dari bar sebelumnya
 bool CheckBreakout(ENUM_POSITION_TYPE &signalType)
 {
-   double prevHigh = iHigh(_Symbol, InpGTTimeframe, 1);
-   double prevLow  = iLow(_Symbol, InpGTTimeframe, 1);
-   double currentPrice = SymbolInfoDouble(_Symbol, SYMBOL_BID);
+   double prevHigh    = iHigh(_Symbol, InpGTTimeframe, 1);
+   double prevLow     = iLow (_Symbol, InpGTTimeframe, 1);
+   double currentPrice= SymbolInfoDouble(_Symbol, SYMBOL_BID);
    
    if(prevHigh == 0 || prevLow == 0) return false;
 
-   // Breakout ke atas
-   if(currentPrice > prevHigh)
-   {
-      signalType = POSITION_TYPE_BUY;
-      return true;
-   }
-   // Breakout ke bawah
-   else if(currentPrice < prevLow)
-   {
-      signalType = POSITION_TYPE_SELL;
-      return true;
-   }
-   
+   if(currentPrice > prevHigh) { signalType = POSITION_TYPE_BUY;  return true; }
+   if(currentPrice < prevLow)  { signalType = POSITION_TYPE_SELL; return true; }
    return false;
 }
 
 //--- Tempatkan order dengan SL & TP berdasarkan Range
 bool PlaceBreakoutOrder(ENUM_POSITION_TYPE type, double lot)
 {
-   double ask = SymbolInfoDouble(_Symbol, SYMBOL_ASK);
-   double bid = SymbolInfoDouble(_Symbol, SYMBOL_BID);
-   
-   double prevHigh = iHigh(_Symbol, InpGTTimeframe, 1);
-   double prevLow  = iLow(_Symbol, InpGTTimeframe, 1);
-   int rangePoints = GetGT_RangePoints();
+   double ask        = SymbolInfoDouble(_Symbol, SYMBOL_ASK);
+   double bid        = SymbolInfoDouble(_Symbol, SYMBOL_BID);
+   double prevHigh   = iHigh(_Symbol, InpGTTimeframe, 1);
+   double prevLow    = iLow (_Symbol, InpGTTimeframe, 1);
+   int    rangePoints= GetGT_RangePoints();
    
    if(rangePoints <= 0) return false;
 
    double price, sl, tp;
-   bool result = false;
+   bool   result = false;
 
    if(type == POSITION_TYPE_BUY)
    {
-      price = ask;
-      sl    = NormalizeDouble(prevLow, myDigits);
-      tp    = NormalizeDouble(price + rangePoints * myPoint, myDigits);
+      price  = ask;
+      sl     = NormalizeDouble(prevLow,  myDigits);
+      tp     = NormalizeDouble(price + rangePoints * myPoint, myDigits);
       result = trade.Buy(lot, _Symbol, price, sl, tp, "GT Breakout BUY");
    }
    else
    {
-      price = bid;
-      sl    = NormalizeDouble(prevHigh, myDigits);
-      tp    = NormalizeDouble(price - rangePoints * myPoint, myDigits);
+      price  = bid;
+      sl     = NormalizeDouble(prevHigh, myDigits);
+      tp     = NormalizeDouble(price - rangePoints * myPoint, myDigits);
       result = trade.Sell(lot, _Symbol, price, sl, tp, "GT Breakout SELL");
    }
 
    if(result)
-   {
-      Print("GT Breakout: ", (type == POSITION_TYPE_BUY ? "BUY" : "SELL"), 
-            " | Lot: ", DoubleToString(lot,2), 
-            " | Range: ", rangePoints, " pts");
-   }
+      Print("GT Breakout: ", (type == POSITION_TYPE_BUY ? "BUY" : "SELL"),
+            " | Lot: ", DoubleToString(lot, 2), " | Range: ", rangePoints, " pts");
    else
-   {
       Print("GT Breakout: Order gagal - ", trade.ResultRetcodeDescription());
-   }
    
    return result;
 }
@@ -990,39 +930,31 @@ bool PlaceBreakoutOrder(ENUM_POSITION_TYPE type, double lot)
 //--- Fungsi utama trading logic baru
 void ExecuteTradingLogic()
 {
-   // Jika masih ada posisi terbuka, jangan buka yang baru
    if(CountMyPositions() > 0) return;
 
    ENUM_POSITION_TYPE signalType;
    
-   // Cek apakah ada breakout
    if(CheckBreakout(signalType))
    {
       double nextLot = InpLot;
       
-      // Jika ini reverse setelah loss, naikkan lot
       if(g_martingaleStep > 0)
-      {
          nextLot = NormalizeDouble(InpLot * MathPow(InpMultiplier, g_martingaleStep), 2);
-      }
       
-      // Enforce lot minimum & step
       double minLot  = SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_MIN);
       double stepLot = SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_STEP);
       nextLot = MathMax(nextLot, minLot);
       nextLot = NormalizeDouble(MathRound(nextLot / stepLot) * stepLot, 2);
       
       if(PlaceBreakoutOrder(signalType, nextLot))
-      {
          g_lastDirection = signalType;
-      }
    }
 }
 
 //--- Fungsi untuk mendeteksi hasil posisi yang baru ditutup
 void OnTradeTransaction(const MqlTradeTransaction &trans,
-                        const MqlTradeRequest &request,
-                        const MqlTradeResult &result)
+                        const MqlTradeRequest     &request,
+                        const MqlTradeResult      &result)
 {
    if(trans.type == TRADE_TRANSACTION_DEAL_ADD)
    {
@@ -1030,35 +962,30 @@ void OnTradeTransaction(const MqlTradeTransaction &trans,
       if(HistoryDealSelect(dealTicket))
       {
          if(HistoryDealGetInteger(dealTicket, DEAL_MAGIC) != InpMagic) return;
-         if(HistoryDealGetString(dealTicket, DEAL_SYMBOL) != _Symbol) return;
+         if(HistoryDealGetString (dealTicket, DEAL_SYMBOL)!= _Symbol)  return;
          
          ENUM_DEAL_ENTRY entry = (ENUM_DEAL_ENTRY)HistoryDealGetInteger(dealTicket, DEAL_ENTRY);
          if(entry != DEAL_ENTRY_OUT && entry != DEAL_ENTRY_INOUT) return;
          
          double profit = HistoryDealGetDouble(dealTicket, DEAL_PROFIT) + 
-                         HistoryDealGetDouble(dealTicket, DEAL_SWAP) + 
+                         HistoryDealGetDouble(dealTicket, DEAL_SWAP)   + 
                          HistoryDealGetDouble(dealTicket, DEAL_COMMISSION);
          
          if(profit > 0)
          {
-            // Profit → Reset Martingale
             g_martingaleStep = 0;
             Print("GT: Profit terdeteksi. Martingale direset ke 0.");
          }
          else if(profit < 0)
          {
-            // Loss → Naikkan step Martingale & siap reverse
             g_martingaleStep++;
-            
             if(g_martingaleStep >= InpMaxSteps)
             {
                Print("GT: Max Martingale step tercapai (", InpMaxSteps, "). Reset ke 0.");
                g_martingaleStep = 0;
             }
             else
-            {
                Print("GT: Loss terdeteksi. Martingale naik ke step ", g_martingaleStep);
-            }
          }
       }
    }
@@ -1080,7 +1007,6 @@ void CloseAllPositions(bool pos, bool pend)
                trade.PositionClose(ticket);
       }
    }
-   
    if(pend)
    {
       for(int i = OrdersTotal() - 1; i >= 0; i--)
