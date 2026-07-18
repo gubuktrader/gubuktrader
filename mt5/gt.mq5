@@ -899,188 +899,170 @@ void UpdateCountdown()
 }
 
 //+------------------------------------------------------------------+
-//| [9] EA Trading Logic - Sequential State Machine                  |
+//| [9] EA Trading Logic - GT Breakout M5 + Instant Reverse Martingale
 //+------------------------------------------------------------------+
 
-//--- Helper: Count active EA positions on this symbol
-int CountMyPositions()
-{
-   int count = 0;
-   for(int i = PositionsTotal() - 1; i >= 0; i--)
-   {
-      ulong ticket = PositionGetTicket(i);
-      if(PositionSelectByTicket(ticket))
-         if(PositionGetString(POSITION_SYMBOL) == _Symbol && 
-            PositionGetInteger(POSITION_MAGIC) == (long)InpMagic)
-            count++;
-   }
-   return count;
-}
+//--- State Variables untuk sistem baru
+int      g_martingaleStep = 0;                    // Langkah Martingale saat ini
+ENUM_POSITION_TYPE g_lastDirection   = -1;        // Arah posisi terakhir
+bool     g_waitingForBreakout = true;             // Flag untuk menunggu sinyal breakout
 
-//--- Helper: Get last closed deal from history (EXIT deals only)
-// Returns: ticket of the last closed deal, or 0 if none
-ulong GetLastClosedDeal(double &outProfit, ENUM_POSITION_TYPE &outType)
+//--- Hitung Range dalam points
+int GetGT_RangePoints()
 {
-   HistorySelect(TimeCurrent() - 7*24*3600, TimeCurrent());
-   int total = HistoryDealsTotal();
+   double high = iHigh(_Symbol, InpGTTimeframe, 1);
+   double low  = iLow(_Symbol, InpGTTimeframe, 1);
    
-   for(int i = total - 1; i >= 0; i--)
-   {
-      ulong ticket = HistoryDealGetTicket(i);
-      if(HistoryDealGetInteger(ticket, DEAL_MAGIC)  != (long)InpMagic) continue;
-      if(HistoryDealGetString(ticket, DEAL_SYMBOL)  != _Symbol) continue;
-      ENUM_DEAL_ENTRY entry = (ENUM_DEAL_ENTRY)HistoryDealGetInteger(ticket, DEAL_ENTRY);
-      if(entry != DEAL_ENTRY_OUT && entry != DEAL_ENTRY_INOUT) continue; // only closing deals
-      
-      outProfit = HistoryDealGetDouble(ticket, DEAL_PROFIT) + 
-                  HistoryDealGetDouble(ticket, DEAL_SWAP)   + 
-                  HistoryDealGetDouble(ticket, DEAL_COMMISSION);
-      
-      ENUM_DEAL_TYPE dtype = (ENUM_DEAL_TYPE)HistoryDealGetInteger(ticket, DEAL_TYPE);
-      // DEAL_TYPE_SELL = closing a BUY, DEAL_TYPE_BUY = closing a SELL
-      outType = (dtype == DEAL_TYPE_SELL) ? POSITION_TYPE_BUY : POSITION_TYPE_SELL;
-      return ticket;
-   }
-   return 0;
+   if(high == 0 || low == 0) return 0;
+   
+   return (int)((high - low) / myPoint);
 }
 
-//--- Place a market order with SL/TP
-bool PlaceOrder(ENUM_POSITION_TYPE type, double lot, string comment)
+//--- Cek Breakout dari bar M5 sebelumnya
+bool CheckBreakout(ENUM_POSITION_TYPE &signalType)
+{
+   double prevHigh = iHigh(_Symbol, InpGTTimeframe, 1);
+   double prevLow  = iLow(_Symbol, InpGTTimeframe, 1);
+   double currentPrice = SymbolInfoDouble(_Symbol, SYMBOL_BID);
+   
+   if(prevHigh == 0 || prevLow == 0) return false;
+
+   // Breakout ke atas
+   if(currentPrice > prevHigh)
+   {
+      signalType = POSITION_TYPE_BUY;
+      return true;
+   }
+   // Breakout ke bawah
+   else if(currentPrice < prevLow)
+   {
+      signalType = POSITION_TYPE_SELL;
+      return true;
+   }
+   
+   return false;
+}
+
+//--- Tempatkan order dengan SL & TP berdasarkan Range
+bool PlaceBreakoutOrder(ENUM_POSITION_TYPE type, double lot)
 {
    double ask = SymbolInfoDouble(_Symbol, SYMBOL_ASK);
    double bid = SymbolInfoDouble(_Symbol, SYMBOL_BID);
+   
+   double prevHigh = iHigh(_Symbol, InpGTTimeframe, 1);
+   double prevLow  = iLow(_Symbol, InpGTTimeframe, 1);
+   int rangePoints = GetGT_RangePoints();
+   
+   if(rangePoints <= 0) return false;
+
    double price, sl, tp;
    bool result = false;
-   
+
    if(type == POSITION_TYPE_BUY)
    {
       price = ask;
-      sl    = (InpSL > 0) ? NormalizeDouble(price - InpSL * myPoint, myDigits) : 0;
-      tp    = (InpTP > 0) ? NormalizeDouble(price + InpTP * myPoint, myDigits) : 0;
-      result = trade.Buy(lot, _Symbol, price, sl, tp, comment);
+      sl    = NormalizeDouble(prevLow, myDigits);
+      tp    = NormalizeDouble(price + rangePoints * myPoint, myDigits);
+      result = trade.Buy(lot, _Symbol, price, sl, tp, "GT Breakout BUY");
    }
    else
    {
       price = bid;
-      sl    = (InpSL > 0) ? NormalizeDouble(price + InpSL * myPoint, myDigits) : 0;
-      tp    = (InpTP > 0) ? NormalizeDouble(price - InpTP * myPoint, myDigits) : 0;
-      result = trade.Sell(lot, _Symbol, price, sl, tp, comment);
+      sl    = NormalizeDouble(prevHigh, myDigits);
+      tp    = NormalizeDouble(price - rangePoints * myPoint, myDigits);
+      result = trade.Sell(lot, _Symbol, price, sl, tp, "GT Breakout SELL");
    }
-   
+
    if(result)
-      Print("Escindo EA: Order open [", (type == POSITION_TYPE_BUY ? "BUY" : "SELL"),
-            "] Lot:", DoubleToString(lot,2), " | ", comment);
+   {
+      Print("GT Breakout: ", (type == POSITION_TYPE_BUY ? "BUY" : "SELL"), 
+            " | Lot: ", DoubleToString(lot,2), 
+            " | Range: ", rangePoints, " pts");
+   }
    else
-      Print("GT EA: Order FAILED – ", trade.ResultRetcodeDescription());
+   {
+      Print("GT Breakout: Order gagal - ", trade.ResultRetcodeDescription());
+   }
    
    return result;
 }
 
-//--- Main Logic: Sequential State Machine
+//--- Fungsi utama trading logic baru
 void ExecuteTradingLogic()
 {
-   // If we already have an open position, do nothing. Let broker SL/TP handle it.
+   // Jika masih ada posisi terbuka, jangan buka yang baru
    if(CountMyPositions() > 0) return;
+
+   ENUM_POSITION_TYPE signalType;
    
-   // --------------- No open position: decide next action ---------------
-   double lastProfit = 0;
-   ENUM_POSITION_TYPE lastType = POSITION_TYPE_BUY;
-   ulong lastDealTicket = GetLastClosedDeal(lastProfit, lastType);
-   
-   double nextLot;
-   ENUM_POSITION_TYPE nextType;
-   
-   if(lastDealTicket == 0 || lastDealTicket == (ulong)g_lastDeal)
+   // Cek apakah ada breakout
+   if(CheckBreakout(signalType))
    {
-      // ========== FIRST TRADE ever (or already processed) ==========
-      // Read GT Neto from the InpGTTimeframe last closed bar
-      double lastOpen  = iOpen(_Symbol,  InpGTTimeframe, 1);
-      double lastClose = iClose(_Symbol, InpGTTimeframe, 1);
+      double nextLot = InpLot;
       
-      if(lastOpen == 0 || lastClose == 0) return;
-      
-      // If g_isFirstTrade is false, it means the last deal was already processed
-      if(!g_isFirstTrade) return;
-      
-      if(lastClose > lastOpen)
-         nextType = POSITION_TYPE_BUY;
-      else if(lastClose < lastOpen)
-         nextType = POSITION_TYPE_SELL;
-      else
-         return; // doji GT – no signal
-      
-      nextLot = InpLot;
-      g_isFirstTrade = false;
-   }
-   else
-   {
-      // ========== Kita baru saja menyelesaikan kesepakatan ====================
-      // Tandai itu sebagai sudah diproses/selesai supaya kita tidak mengirim/menjalankan dua kali
-      if(lastDealTicket == (ulong)g_lastDeal) return;
-      g_lastDeal = (int)lastDealTicket;
-      
-      // Tentukan besarnya langkah Martingale berdasarkan dari rentetan kekalahan
-      // Lihat ke belakang dari transaksi terakhir hingga menemukan transaksi yang menguntungkan untuk menghitung kerugian beruntun
-      HistorySelect(TimeCurrent() - 30*24*3600, TimeCurrent());
-      int total         = HistoryDealsTotal();
-      int lossStreak    = 0;
-      double runLot     = InpLot;
-      
-      for(int i = total - 1; i >= 0; i--)
+      // Jika ini reverse setelah loss, naikkan lot
+      if(g_martingaleStep > 0)
       {
-         ulong tk = HistoryDealGetTicket(i);
-         if(HistoryDealGetInteger(tk, DEAL_MAGIC)  != (long)InpMagic) continue;
-         if(HistoryDealGetString(tk, DEAL_SYMBOL)  != _Symbol) continue;
-         ENUM_DEAL_ENTRY ent = (ENUM_DEAL_ENTRY)HistoryDealGetInteger(tk, DEAL_ENTRY);
-         if(ent != DEAL_ENTRY_OUT && ent != DEAL_ENTRY_INOUT) continue;
-         
-         double p = HistoryDealGetDouble(tk, DEAL_PROFIT) + 
-                    HistoryDealGetDouble(tk, DEAL_SWAP)   +
-                    HistoryDealGetDouble(tk, DEAL_COMMISSION);
-         if(p < 0)
-         {
-            lossStreak++;
-            if(lossStreak >= InpMaxSteps) break;
-         }
-         else
-            break; // profitable deal found → reset streak
+         nextLot = NormalizeDouble(InpLot * MathPow(InpMultiplier, g_martingaleStep), 2);
       }
       
-      if(lastProfit >= 0)
+      // Enforce lot minimum & step
+      double minLot  = SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_MIN);
+      double stepLot = SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_STEP);
+      nextLot = MathMax(nextLot, minLot);
+      nextLot = NormalizeDouble(MathRound(nextLot / stepLot) * stepLot, 2);
+      
+      if(PlaceBreakoutOrder(signalType, nextLot))
       {
-         // ========== After TP: same direction, reset lot ===========
-         nextType = lastType;
-         nextLot  = InpLot;
-      }
-      else
-      {
-         // ========== After SL: reverse direction, apply Martingale ==
-         nextType = (lastType == POSITION_TYPE_BUY) ? POSITION_TYPE_SELL : POSITION_TYPE_BUY;
-         
-         // Calculate Martingale lot
-         if(lossStreak > 0 && lossStreak < InpMaxSteps)
-            nextLot = NormalizeDouble(InpLot * MathPow(InpMultiplier, lossStreak), 2);
-         else
-         {
-            // Max steps reached → reset
-            nextLot = InpLot;
-            Print("GT EA: Max Martingale Steps reached – resetting to base lot.");
-         }
+         g_lastDirection = signalType;
       }
    }
-   
-   // Enforce minimum lot constraints
-   double minLot  = SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_MIN);
-   double stepLot = SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_STEP);
-   nextLot = MathMax(nextLot, minLot);
-   nextLot = NormalizeDouble(MathRound(nextLot / stepLot) * stepLot, 2);
-   
-   string comment = StringFormat("GT|Step%d|Lot%.2f", lossStreak_or_new(), nextLot);
-   PlaceOrder(nextType, nextLot, comment);
 }
 
-// Lightweight helper used only for the comment string (avoids code duplication)
-int lossStreak_or_new() { return g_isFirstTrade ? 0 : -1; }
+//--- Fungsi untuk mendeteksi hasil posisi yang baru ditutup
+void OnTradeTransaction(const MqlTradeTransaction &trans,
+                        const MqlTradeRequest &request,
+                        const MqlTradeResult &result)
+{
+   if(trans.type == TRADE_TRANSACTION_DEAL_ADD)
+   {
+      ulong dealTicket = trans.deal;
+      if(HistoryDealSelect(dealTicket))
+      {
+         if(HistoryDealGetInteger(dealTicket, DEAL_MAGIC) != InpMagic) return;
+         if(HistoryDealGetString(dealTicket, DEAL_SYMBOL) != _Symbol) return;
+         
+         ENUM_DEAL_ENTRY entry = (ENUM_DEAL_ENTRY)HistoryDealGetInteger(dealTicket, DEAL_ENTRY);
+         if(entry != DEAL_ENTRY_OUT && entry != DEAL_ENTRY_INOUT) return;
+         
+         double profit = HistoryDealGetDouble(dealTicket, DEAL_PROFIT) + 
+                         HistoryDealGetDouble(dealTicket, DEAL_SWAP) + 
+                         HistoryDealGetDouble(dealTicket, DEAL_COMMISSION);
+         
+         if(profit > 0)
+         {
+            // Profit → Reset Martingale
+            g_martingaleStep = 0;
+            Print("GT: Profit terdeteksi. Martingale direset ke 0.");
+         }
+         else if(profit < 0)
+         {
+            // Loss → Naikkan step Martingale & siap reverse
+            g_martingaleStep++;
+            
+            if(g_martingaleStep >= InpMaxSteps)
+            {
+               Print("GT: Max Martingale step tercapai (", InpMaxSteps, "). Reset ke 0.");
+               g_martingaleStep = 0;
+            }
+            else
+            {
+               Print("GT: Loss terdeteksi. Martingale naik ke step ", g_martingaleStep);
+            }
+         }
+      }
+   }
+}
 
 //+------------------------------------------------------------------+
 //| [10] Close All Positions                                         |
